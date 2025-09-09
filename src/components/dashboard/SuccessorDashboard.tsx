@@ -122,6 +122,80 @@ export const SuccessorDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* AI Knowledge Transfer Insights */}
+      <Card className="shadow-medium">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <div className="p-1 bg-primary-soft rounded">
+              <div className="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
+                <span className="text-xs text-white font-bold">✨</span>
+              </div>
+            </div>
+            AI Knowledge Transfer Insights
+          </CardTitle>
+          <CardDescription>
+            Personalized <span className="text-primary font-medium">recommendations</span> to accelerate your onboarding
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Focus on Client Renewals */}
+            <div className="flex items-start gap-4 p-4 border rounded-lg bg-card">
+              <div className="p-2 bg-critical-soft rounded-lg">
+                <div className="w-5 h-5 bg-critical rounded-full flex items-center justify-center">
+                  <span className="text-xs text-white">🎯</span>
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-medium text-foreground">Focus on Client Renewals</h4>
+                    <p className="text-sm text-muted-foreground">Q1 renewal pipeline requires immediate attention - 3 high-value accounts at risk</p>
+                  </div>
+                  <Badge variant="secondary" className="ml-2 text-xs">AI</Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Key Knowledge Gap */}
+            <div className="flex items-start gap-4 p-4 border rounded-lg bg-card">
+              <div className="p-2 bg-warning-soft rounded-lg">
+                <div className="w-5 h-5 bg-warning rounded-full flex items-center justify-center">
+                  <span className="text-xs text-white">🧩</span>
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-medium text-foreground">Key Knowledge Gap</h4>
+                    <p className="text-sm text-muted-foreground">CRM automation rules are 65% complete - request detailed walkthrough session</p>
+                  </div>
+                  <Badge variant="secondary" className="ml-2 text-xs">AI</Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Win Available */}
+            <div className="flex items-start gap-4 p-4 border rounded-lg bg-card">
+              <div className="p-2 bg-success-soft rounded-lg">
+                <div className="w-5 h-5 bg-success rounded-full flex items-center justify-center">
+                  <span className="text-xs text-white">📈</span>
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-medium text-foreground">Quick Win Available</h4>
+                    <p className="text-sm text-muted-foreground">Stakeholder introductions can be fast-tracked - 2 key contacts available this week</p>
+                  </div>
+                  <Badge variant="secondary" className="ml-2 text-xs">AI</Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Critical Missing Items Alert */}
       {mockHandoverData.criticalGaps.length > 0 && (
         <Alert variant="destructive" className="border-critical/20 bg-critical-soft">
