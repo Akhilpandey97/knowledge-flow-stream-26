@@ -12,7 +12,8 @@ export const LoginForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const [isSignUp, setIsSignUp] = useState(false);
+  const { login, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,9 +21,15 @@ export const LoginForm: React.FC = () => {
     setError('');
 
     try {
-      await login(email, password);
-    } catch (err) {
-      setError('Invalid email or password');
+      if (isSignUp && signUp) {
+        await signUp(email, password);
+        setError('');
+        alert('Check your email for the confirmation link!');
+      } else {
+        await login(email, password);
+      }
+    } catch (err: any) {
+      setError(err.message || (isSignUp ? 'Failed to create account' : 'Invalid email or password'));
     } finally {
       setIsLoading(false);
     }
@@ -85,11 +92,20 @@ export const LoginForm: React.FC = () => {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    {isSignUp ? 'Creating account...' : 'Signing in...'}
                   </>
                 ) : (
-                  'Sign in'
+                  isSignUp ? 'Create Account' : 'Sign in'
                 )}
+              </Button>
+              
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
               </Button>
             </form>
           </CardContent>

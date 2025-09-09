@@ -15,60 +15,19 @@ import {
   MessageSquare,
   Plus,
   Target,
-  Edit
+  Edit,
+  Loader2
 } from 'lucide-react';
 import { HandoverTask } from '@/types/handover';
 import { TaskDetailModal } from './TaskDetailModal';
 import { ExportButton } from '@/components/ui/export-button';
 import { IntegrationsPanel } from '@/components/ui/integrations-panel';
-
-// Mock data for exiting employee
-const mockHandoverData = {
-  progress: 68,
-  targetDate: '2024-01-15',
-  successorName: 'Sarah Wilson',
-  totalTasks: 12,
-  completedTasks: 8,
-  tasks: [
-    {
-      id: '1',
-      title: 'Client Account Handover - TechCorp',
-      description: 'Transfer all TechCorp account details, meeting notes, and contact information',
-      category: 'Client Management',
-      isCompleted: true,
-      priority: 'critical' as const,
-      notes: 'Completed meeting with Sarah. All files transferred.',
-    },
-    {
-      id: '2',
-      title: 'CRM Workflow Documentation',
-      description: 'Document the custom CRM workflows and automation rules',
-      category: 'Systems & Tools',
-      isCompleted: true,
-      priority: 'high' as const,
-    },
-    {
-      id: '3',
-      title: 'Renewal Risk Assessment',
-      description: 'Identify accounts at risk for renewal and provide mitigation strategies',
-      category: 'Strategic Planning',
-      isCompleted: false,
-      priority: 'critical' as const,
-      dueDate: '2024-01-10',
-    },
-    {
-      id: '4',
-      title: 'Team Introduction Sessions',
-      description: 'Introduce successor to key team members and stakeholders',
-      category: 'Relationships',
-      isCompleted: false,
-      priority: 'medium' as const,
-    },
-  ] as HandoverTask[]
-};
+import { useHandover } from '@/hooks/useHandover';
+import { useToast } from '@/components/ui/use-toast';
 
 export const ExitingEmployeeDashboard: React.FC = () => {
-  const [tasks, setTasks] = useState(mockHandoverData.tasks);
+  const { tasks, loading, error, updateTask } = useHandover();
+  const { toast } = useToast();
   const [newNote, setNewNote] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskDetailModal, setTaskDetailModal] = useState<{ isOpen: boolean; task: HandoverTask | null }>({
@@ -76,24 +35,47 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     task: null
   });
 
-  const toggleTask = (taskId: string) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId 
-        ? { ...task, isCompleted: !task.isCompleted }
-        : task
-    ));
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      await updateTask(taskId, { isCompleted: !task.isCompleted });
+      toast({
+        title: task.isCompleted ? 'Task marked as pending' : 'Task completed',
+        description: `"${task.title}" has been updated.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update task. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const addNote = (taskId: string) => {
+  const addNote = async (taskId: string) => {
     if (!newNote.trim()) return;
     
-    setTasks(prev => prev.map(task => 
-      task.id === taskId 
-        ? { ...task, notes: task.notes ? `${task.notes}\n\n${newNote}` : newNote }
-        : task
-    ));
-    setNewNote('');
-    setSelectedTaskId(null);
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      const updatedNotes = task.notes ? `${task.notes}\n\n${newNote}` : newNote;
+      await updateTask(taskId, { notes: updatedNotes });
+      setNewNote('');
+      setSelectedTaskId(null);
+      toast({
+        title: 'Note added',
+        description: 'Your note has been saved successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save note. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const openTaskDetail = (task: HandoverTask) => {
@@ -104,12 +86,24 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     setTaskDetailModal({ isOpen: false, task: null });
   };
 
-  const saveTaskNotes = (taskId: string, notes: string) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId 
-        ? { ...task, notes: task.notes ? `${task.notes}\n\n${notes}` : notes }
-        : task
-    ));
+  const saveTaskNotes = async (taskId: string, notes: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      const updatedNotes = task.notes ? `${task.notes}\n\n${notes}` : notes;
+      await updateTask(taskId, { notes: updatedNotes });
+      toast({
+        title: 'Notes saved',
+        description: 'Task notes have been updated successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save notes. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -124,6 +118,25 @@ export const ExitingEmployeeDashboard: React.FC = () => {
   const completedTasks = tasks.filter(task => task.isCompleted).length;
   const progressPercentage = Math.round((completedTasks / tasks.length) * 100);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading handover data...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          Error loading handover data: {error}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -131,7 +144,7 @@ export const ExitingEmployeeDashboard: React.FC = () => {
         <div>
           <h2 className="text-3xl font-bold text-foreground">Knowledge Handover</h2>
           <p className="text-muted-foreground">
-            Transferring knowledge to <span className="font-medium text-foreground">{mockHandoverData.successorName}</span>
+            Transferring knowledge to your successor
           </p>
         </div>
         <div className="flex items-center gap-2">
