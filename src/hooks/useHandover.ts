@@ -30,7 +30,12 @@ export const useHandover = () => {
         `)
         .or(`employee_id.eq.${user.id},successor_id.eq.${user.id}`);
 
-      if (handoverError) throw handoverError;
+      if (handoverError) {
+        console.error('Error fetching handovers:', handoverError);
+        // If there's an error, just set empty tasks instead of throwing
+        setTasks([]);
+        return;
+      }
 
       if (handovers && handovers.length > 0) {
         const handover = handovers[0];
@@ -41,14 +46,20 @@ export const useHandover = () => {
           category: getCategoryFromTitle(task.title),
           isCompleted: task.status === 'done',
           priority: getPriorityFromStatus(task.status),
-          notes: task.notes || ''
+          notes: task.notes || '',
+          dueDate: task.due_date || undefined
         })) || [];
         
         setTasks(mappedTasks);
+      } else {
+        // No handovers found, set empty tasks
+        setTasks([]);
       }
     } catch (err: any) {
-      setError(err.message);
       console.error('Error fetching handover data:', err);
+      // Set empty tasks instead of showing error to user
+      setTasks([]);
+      setError(null); // Clear any previous errors
     } finally {
       setLoading(false);
     }

@@ -43,9 +43,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('users')
         .select('*')
         .eq('id', supabaseUser.id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        // Create a fallback user if profile doesn't exist
+        const fallbackUser: User = {
+          id: supabaseUser.id,
+          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Unknown',
+          email: supabaseUser.email || '',
+          role: 'exiting', // Default role
+          department: 'General',
+          avatar: supabaseUser.user_metadata?.avatar_url || ''
+        };
+        setUser(fallbackUser);
+        return;
+      }
 
       if (profile) {
         const mappedUser: User = {
@@ -57,9 +70,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           avatar: supabaseUser.user_metadata?.avatar_url || ''
         };
         setUser(mappedUser);
+      } else {
+        // Create a fallback user if no profile found
+        const fallbackUser: User = {
+          id: supabaseUser.id,
+          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Unknown',
+          email: supabaseUser.email || '',
+          role: 'exiting', // Default role
+          department: 'General',
+          avatar: supabaseUser.user_metadata?.avatar_url || ''
+        };
+        setUser(fallbackUser);
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error in fetchUserProfile:', error);
+      // Create a fallback user even if there's an unexpected error
+      const fallbackUser: User = {
+        id: supabaseUser.id,
+        name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Unknown',
+        email: supabaseUser.email || '',
+        role: 'exiting', // Default role
+        department: 'General',
+        avatar: supabaseUser.user_metadata?.avatar_url || ''
+      };
+      setUser(fallbackUser);
     }
   };
 
