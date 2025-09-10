@@ -11,30 +11,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('AuthContext: Setting up auth listener...');
+    
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        console.log('AuthContext: Auth state changed:', event, !!session);
         setSession(session);
+        
         if (session?.user) {
-          await fetchUserProfile(session.user);
+          // Use setTimeout to defer the async operation and prevent deadlocks
+          setTimeout(() => {
+            fetchUserProfile(session.user);
+          }, 0);
         } else {
           setUser(null);
+          setLoading(false);
         }
-        setLoading(false);
+        
+        // Always set loading to false for auth state changes
+        if (event !== 'INITIAL_SESSION') {
+          setLoading(false);
+        }
       }
     );
 
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        fetchUserProfile(session.user);
-      } else {
+    // Then check for existing session with proper error handling
+    const initializeSession = async () => {
+      try {
+        console.log('AuthContext: Checking for existing session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('AuthContext: Error getting session:', error);
+          setLoading(false);
+          return;
+        }
+        
+        setSession(session);
+        if (session?.user) {
+          console.log('AuthContext: Found existing session, fetching profile...');
+          await fetchUserProfile(session.user);
+        } else {
+          console.log('AuthContext: No existing session found');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('AuthContext: Error in session initialization:', error);
         setLoading(false);
       }
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initializeSession();
+
+    // Set a fallback timeout to ensure loading never stays true indefinitely
+    const fallbackTimeout = setTimeout(() => {
+      console.warn('AuthContext: Fallback timeout triggered, setting loading to false');
+      setLoading(false);
+    }, 10000); // 10 second fallback
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallbackTimeout);
+    };
   }, []);
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
