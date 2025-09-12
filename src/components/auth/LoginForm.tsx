@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +15,19 @@ export const LoginForm: React.FC = () => {
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const { login, signUp } = useAuth();
+
+  useEffect(() => {
+    try {
+      const k = 'demoSeededV1';
+      if (localStorage.getItem(k)) return;
+      supabase.functions.invoke('seed_demo', { body: {} }).then(() => {
+        localStorage.setItem(k, '1');
+        console.log('Demo data seeded');
+      }).catch((e) => console.warn('Seed demo failed', e));
+    } catch (e) {
+      console.warn('Seed demo init error', e);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +50,9 @@ export const LoginForm: React.FC = () => {
   };
 
   const demoCredentials = [
-    { email: 'john.doe@company.com', role: 'Exiting Employee', department: 'Sales' },
-    { email: 'sarah.wilson@company.com', role: 'Successor', department: 'Sales' },
-    { email: 'hr@company.com', role: 'HR Manager', department: 'Human Resources' }
+    { email: 'ap79020@gmail.com', role: 'HR Manager', department: 'Human Resources' },
+    { email: 'arbaaz.jawed@gmail.com', role: 'Successor', department: 'Sales' },
+    { email: 'john.doe@company.com', role: 'Exiting Employee', department: 'Sales' }
   ];
 
   return (
