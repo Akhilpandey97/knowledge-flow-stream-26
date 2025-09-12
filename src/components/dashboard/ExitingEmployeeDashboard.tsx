@@ -57,12 +57,8 @@ export const ExitingEmployeeDashboard: React.FC = () => {
   const addNote = async (taskId: string) => {
     if (!newNote.trim()) return;
     
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-
     try {
-      const updatedNotes = task.notes ? `${task.notes}\n\n${newNote}` : newNote;
-      await updateTask(taskId, { notes: updatedNotes });
+      await updateTask(taskId, { notes: newNote });
       setNewNote('');
       setSelectedTaskId(null);
       toast({
@@ -87,12 +83,8 @@ export const ExitingEmployeeDashboard: React.FC = () => {
   };
 
   const saveTaskNotes = async (taskId: string, notes: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-
     try {
-      const updatedNotes = task.notes ? `${task.notes}\n\n${notes}` : notes;
-      await updateTask(taskId, { notes: updatedNotes });
+      await updateTask(taskId, { notes });
       toast({
         title: 'Notes saved',
         description: 'Task notes have been updated successfully.',
@@ -116,7 +108,7 @@ export const ExitingEmployeeDashboard: React.FC = () => {
   };
 
   const completedTasks = tasks.filter(task => task.isCompleted).length;
-  const progressPercentage = Math.round((completedTasks / tasks.length) * 100);
+  const progressPercentage = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
   if (loading) {
     return (

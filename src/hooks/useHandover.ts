@@ -39,16 +39,43 @@ export const useHandover = () => {
 
       if (handovers && handovers.length > 0) {
         const handover = handovers[0];
-        const mappedTasks: HandoverTask[] = handover.tasks?.map((task: any) => ({
+        let mappedTasks: HandoverTask[] = handover.tasks?.map((task: any) => ({
           id: task.id,
           title: task.title,
           description: task.description || '',
           category: getCategoryFromTitle(task.title),
           isCompleted: task.status === 'done',
           priority: getPriorityFromStatus(task.status),
-          notes: task.notes || '',
+          notes: '', // Will be populated from notes table
           dueDate: task.due_date || undefined
         })) || [];
+        
+        // Fetch notes for all tasks
+        if (mappedTasks.length > 0) {
+          const taskIds = mappedTasks.map(task => task.id);
+          const { data: notes } = await supabase
+            .from('notes')
+            .select('task_id, content, created_at')
+            .in('task_id', taskIds)
+            .order('created_at', { ascending: true });
+          
+          // Aggregate notes by task
+          if (notes) {
+            const notesByTask: Record<string, string[]> = {};
+            notes.forEach(note => {
+              if (!notesByTask[note.task_id]) {
+                notesByTask[note.task_id] = [];
+              }
+              notesByTask[note.task_id].push(note.content);
+            });
+            
+            // Add notes to tasks
+            mappedTasks = mappedTasks.map(task => ({
+              ...task,
+              notes: notesByTask[task.id]?.join('\n\n') || ''
+            }));
+          }
+        }
         
         setTasks(mappedTasks);
       } else {
@@ -67,19 +94,27 @@ export const useHandover = () => {
 
   const updateTask = async (taskId: string, updates: Partial<HandoverTask>) => {
     try {
-      const statusValue = updates.isCompleted !== undefined 
-        ? (updates.isCompleted ? 'done' : 'pending')
-        : undefined;
+      // Handle status updates
+      if (updates.isCompleted !== undefined) {
+        const statusValue = updates.isCompleted ? 'done' : 'pending';
+        const { error } = await supabase
+          .from('tasks')
+          .update({ status: statusValue })
+          .eq('id', taskId);
+        if (error) throw error;
+      }
 
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          ...(statusValue && { status: statusValue }),
-          ...(updates.notes && { notes: updates.notes })
-        })
-        .eq('id', taskId);
-
-      if (error) throw error;
+      // Handle notes updates - insert into notes table
+      if (updates.notes && user) {
+        const { error } = await supabase
+          .from('notes')
+          .insert({
+            task_id: taskId,
+            content: updates.notes,
+            created_by: user.id
+          });
+        if (error) throw error;
+      }
 
       // Update local state
       setTasks(prev => prev.map(task => 

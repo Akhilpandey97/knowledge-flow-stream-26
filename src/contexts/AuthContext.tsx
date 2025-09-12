@@ -138,18 +138,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const mapDatabaseRole = (dbRole: string): UserRole => {
     switch (dbRole) {
+      // Legacy role mapping
       case 'employee': return 'exiting';
-      case 'successor': return 'successor';
       case 'manager': return 'hr-manager';
+      // New role mapping
+      case 'exiting': return 'exiting';
+      case 'successor': return 'successor';
+      case 'hr-manager': return 'hr-manager';
       default: return 'exiting';
     }
   };
 
   const getDepartmentForRole = (role: string): string => {
     switch (role) {
+      // Legacy role mapping
       case 'employee': return 'Sales';
-      case 'successor': return 'Sales';
       case 'manager': return 'Human Resources';
+      // New role mapping
+      case 'exiting': return 'Sales';
+      case 'successor': return 'Sales';
+      case 'hr-manager': return 'Human Resources';
       default: return 'Unknown';
     }
   };

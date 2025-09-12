@@ -2,11 +2,21 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
@@ -15,7 +25,7 @@ serve(async (req) => {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     return new Response(JSON.stringify({ error: 'Missing Supabase env vars' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
@@ -25,9 +35,9 @@ serve(async (req) => {
 
   try {
     const demoUsers = [
-      { email: 'ap79020@gmail.com', password: 'demo123', dbRole: 'manager' },
+      { email: 'ap79020@gmail.com', password: 'demo123', dbRole: 'hr-manager' },
       { email: 'arbaaz.jawed@gmail.com', password: 'demo123', dbRole: 'successor' },
-      { email: 'john.doe@company.com', password: 'demo123', dbRole: 'employee' },
+      { email: 'john.doe@company.com', password: 'demo123', dbRole: 'exiting' },
     ] as const;
 
     // Helper to find existing auth user by email
@@ -57,6 +67,13 @@ serve(async (req) => {
         });
         if (createErr) throw createErr;
         authUser = created.user;
+      } else {
+        // Reset password and confirm email for existing users
+        const { error: updateErr } = await admin.auth.admin.updateUserById(authUser.id, {
+          password: du.password,
+          email_confirm: true,
+        });
+        if (updateErr) console.warn(`Warning: Could not update password for ${du.email}:`, updateErr.message);
       }
 
       // Upsert into public.users with the AUTH user id
@@ -179,13 +196,13 @@ serve(async (req) => {
         handoverId,
         insertedTasks: (insertedTasks || []).length,
       }),
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (e: any) {
     console.error('seed_demo error', e);
     return new Response(JSON.stringify({ error: e?.message || String(e) }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
