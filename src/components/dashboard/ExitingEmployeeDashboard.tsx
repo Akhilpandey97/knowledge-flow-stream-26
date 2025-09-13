@@ -21,7 +21,6 @@ import {
 import { HandoverTask } from '@/types/handover';
 import { TaskDetailModal } from './TaskDetailModal';
 import { ExportButton } from '@/components/ui/export-button';
-import { IntegrationsPanel } from '@/components/ui/integrations-panel';
 import { useHandover } from '@/hooks/useHandover';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -176,9 +175,6 @@ export const ExitingEmployeeDashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Integration Placeholders */}
-      <IntegrationsPanel />
 
       {/* AI Suggestion Alert */}
       <Alert className="border-primary/20 bg-primary-soft">

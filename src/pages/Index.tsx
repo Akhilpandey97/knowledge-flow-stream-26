@@ -5,6 +5,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ExitingEmployeeDashboard } from '@/components/dashboard/ExitingEmployeeDashboard';
 import { SuccessorDashboard } from '@/components/dashboard/SuccessorDashboard';
 import { HRManagerDashboard } from '@/components/dashboard/HRManagerDashboard';
+import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
@@ -25,6 +26,8 @@ const Index = () => {
 
   const renderDashboard = () => {
     switch (user.role) {
+      case 'admin':
+        return <AdminDashboard />;
       case 'exiting':
         return <ExitingEmployeeDashboard />;
       case 'successor':

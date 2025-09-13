@@ -17,7 +17,6 @@ import {
 import { DepartmentProgress } from '@/types/handover';
 import { DepartmentDetailModal } from './DepartmentDetailModal';
 import { ExportButton } from '@/components/ui/export-button';
-import { IntegrationsPanel } from '@/components/ui/integrations-panel';
 
 const mockDepartmentData: DepartmentProgress[] = [
   {
@@ -317,9 +316,6 @@ export const HRManagerDashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Integrations */}
-      <IntegrationsPanel />
 
       {/* Department Detail Modal */}
       <DepartmentDetailModal

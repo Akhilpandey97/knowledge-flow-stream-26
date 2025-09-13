@@ -1,0 +1,156 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const { action, email, role, password, userId } = await req.json()
+
+    console.log(`Admin action: ${action} for email: ${email}`)
+
+    switch (action) {
+      case 'create': {
+        // Create user in Supabase Auth
+        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true
+        })
+
+        if (authError) {
+          console.error('Auth error:', authError)
+          throw new Error(`Failed to create auth user: ${authError.message}`)
+        }
+
+        console.log('Auth user created:', authUser.user?.id)
+
+        // Create user profile in public.users table
+        const { data: profileData, error: profileError } = await supabase
+          .from('users')
+          .insert([
+            {
+              id: authUser.user.id,
+              email,
+              role
+            }
+          ])
+          .select()
+
+        if (profileError) {
+          console.error('Profile error:', profileError)
+          // If profile creation fails, clean up auth user
+          await supabase.auth.admin.deleteUser(authUser.user.id)
+          throw new Error(`Failed to create user profile: ${profileError.message}`)
+        }
+
+        console.log('Profile created successfully')
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            user: profileData[0],
+            message: 'User created successfully'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      case 'reset-password': {
+        if (!userId) {
+          throw new Error('User ID is required for password reset')
+        }
+
+        const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+
+        const { error } = await supabase.auth.admin.updateUserById(userId, {
+          password: newPassword
+        })
+
+        if (error) {
+          console.error('Password reset error:', error)
+          throw new Error(`Failed to reset password: ${error.message}`)
+        }
+
+        console.log('Password reset successful for user:', userId)
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Password reset successfully',
+            newPassword 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      case 'delete': {
+        if (!userId) {
+          throw new Error('User ID is required for deletion')
+        }
+
+        // Delete from auth (this will cascade to users table if foreign key exists)
+        const { error: authError } = await supabase.auth.admin.deleteUser(userId)
+
+        if (authError) {
+          console.error('Auth deletion error:', authError)
+          throw new Error(`Failed to delete user: ${authError.message}`)
+        }
+
+        // Also delete from users table to be safe
+        const { error: profileError } = await supabase
+          .from('users')
+          .delete()
+          .eq('id', userId)
+
+        if (profileError) {
+          console.error('Profile deletion error:', profileError)
+        }
+
+        console.log('User deleted successfully:', userId)
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'User deleted successfully'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      default:
+        throw new Error(`Unknown action: ${action}`)
+    }
+
+  } catch (error) {
+    console.error('Error in admin-user-management:', error)
+    return new Response(
+      JSON.stringify({ 
+        error: error.message || 'Internal server error' 
+      }),
+      { 
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
+  }
+})
