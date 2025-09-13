@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { ExitingEmployeeDashboard } from '@/components/dashboard/ExitingEmployeeDashboard';
+import { StepBasedExitingEmployeeDashboard } from '@/components/dashboard/StepBasedExitingEmployeeDashboard';
 import { SuccessorDashboard } from '@/components/dashboard/SuccessorDashboard';
 import { HRManagerDashboard } from '@/components/dashboard/HRManagerDashboard';
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
@@ -29,7 +29,7 @@ const Index = () => {
       case 'admin':
         return <AdminDashboard />;
       case 'exiting':
-        return <ExitingEmployeeDashboard />;
+        return <StepBasedExitingEmployeeDashboard />;
       case 'successor':
         return <SuccessorDashboard />;
       case 'hr-manager':

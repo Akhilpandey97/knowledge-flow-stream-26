@@ -14,6 +14,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('AuthContext: Setting up auth listener...');
     
+    // Development mode bypass for demo purposes
+    if (import.meta.env.MODE === 'development') {
+      // Mock exiting employee user for demo
+      const mockUser: User = {
+        id: 'mock-exiting-user',
+        email: 'john.doe@company.com',
+        role: 'exiting' as UserRole,
+        name: 'John Doe',
+        department: 'Sales',
+        position: 'Senior Account Manager'
+      };
+      
+      setUser(mockUser);
+      setLoading(false);
+      console.log('AuthContext: Using mock user for development');
+      return;
+    }
+    
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -48,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
           return;
         }
-        
+
         setSession(session);
         if (session?.user) {
           console.log('AuthContext: Found existing session, fetching profile...');
@@ -262,7 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     login,
     logout,
-    isAuthenticated: !!user && !!session,
+    isAuthenticated: import.meta.env.MODE === 'development' ? !!user : (!!user && !!session),
     signUp,
     loading,
     loggingOut,
