@@ -24,12 +24,11 @@ import { ExportButton } from '@/components/ui/export-button';
 import { useHandover } from '@/hooks/useHandover';
 import { useToast } from '@/components/ui/use-toast';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
-import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 
 export const ExitingEmployeeDashboard: React.FC = () => {
   const { tasks, loading, error, updateTask } = useHandover();
   const { toast } = useToast();
-  const { hasUploadedDocument, loading: uploadLoading, markDocumentUploaded } = useDocumentUpload();
+  const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskDetailModal, setTaskDetailModal] = useState<{ isOpen: boolean; task: HandoverTask | null }>({
@@ -112,8 +111,8 @@ export const ExitingEmployeeDashboard: React.FC = () => {
   const completedTasks = tasks.filter(task => task.isCompleted).length;
   const progressPercentage = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
-  // Show loading while checking document upload status
-  if (uploadLoading || loading) {
+  // Show loading while fetching handover data
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -132,11 +131,11 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     );
   }
 
-  // Show document upload screen if no document has been uploaded
-  if (hasUploadedDocument === false) {
+  // Always show document upload screen first for exiting employees
+  if (!hasUploadedInSession) {
     return (
       <DocumentUploadScreen 
-        onUploadComplete={markDocumentUploaded}
+        onUploadComplete={() => setHasUploadedInSession(true)}
       />
     );
   }
