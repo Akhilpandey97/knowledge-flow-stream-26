@@ -93,7 +93,7 @@ const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate
           action: 'create',
           email: formData.email.trim(),
           role: formData.role,
-          password: formData.password, // <-- Send password from form
+          password: formData.password,
         },
       });
 
@@ -113,7 +113,7 @@ const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate
       });
 
       setIsCreateDialogOpen(false);
-      setFormData({ email: '', role: 'exiting', password: '' }); // Reset password field
+      setFormData({ email: '', role: 'exiting', password: '' });
       fetchUsers();
       onStatsUpdate();
     } catch (error: any) {
@@ -134,105 +134,90 @@ const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate
     }
   };
 
-  // Update user handler (unchanged)
-  const handleUpdateUser = async () => {
-    if (!editingUser) return;
-
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          email: formData.email,
-          role: formData.role
-        })
-        .eq('id', editingUser.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "User updated successfully",
-      });
-
-      setEditingUser(null);
-      setFormData({ email: '', role: 'exiting', password: '' });
-      fetchUsers();
-      onStatsUpdate();
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getRoleBadgeColor = (role: UserRole) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-blue-500';
-      case 'hr-manager':
-        return 'bg-green-500';
-      case 'successor':
-        return 'bg-purple-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
+  // Modal/dialog code
+  const renderCreateUserDialog = () => (
+    isCreateDialogOpen && (
+      <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded shadow-lg min-w-[340px] max-w-sm w-full">
+          <h2 className="text-xl font-bold mb-4">Create User</h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleCreateUser();
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Enter user email"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <select
+                id="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                required
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="exiting">Exiting</option>
+                <option value="successor">Successor</option>
+                <option value="hr-manager">HR Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Enter a password"
+                required
+              />
+            </div>
+            <div className="flex justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                className="px-4 py-2 rounded border"
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  );
 
   return (
-    <div>
-      {/* ...other UI code... */}
-      {isCreateDialogOpen && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleCreateUser();
-          }}
-          className="space-y-4"
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-semibold">User Management</h1>
+        <button
+          className="btn btn-primary"
+          onClick={() => setIsCreateDialogOpen(true)}
         >
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              placeholder="Enter user email"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <select
-              id="role"
-              value={formData.role}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="exiting">Exiting</option>
-              <option value="successor">Successor</option>
-              <option value="hr-manager">HR Manager</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          {/* Password input field */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              placeholder="Enter a password"
-              required
-            />
-          </div>
-          <button type="submit" className="btn btn-primary">Create User</button>
-        </form>
-      )}
-      {/* ...other UI code... */}
+          Create User
+        </button>
+      </div>
+      {renderCreateUserDialog()}
+      {/* ...other UI code for user list, etc. */}
     </div>
   );
 };
