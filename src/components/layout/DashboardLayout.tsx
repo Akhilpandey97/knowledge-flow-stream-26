@@ -8,7 +8,7 @@ import { UserRole } from '@/types/auth';
 import { motion } from 'framer-motion';
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, loggingOut } = useAuth();
 
   if (!user) return null;
 
@@ -99,10 +99,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                 variant="ghost" 
                 size="sm" 
                 onClick={logout}
-                className="text-muted-foreground hover:text-foreground"
+                disabled={loggingOut}
+                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
               >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">Logout</span>
+                <LogOut className={`h-4 w-4 ${loggingOut ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline ml-2">
+                  {loggingOut ? 'Logging out...' : 'Logout'}
+                </span>
               </Button>
             </div>
           </div>

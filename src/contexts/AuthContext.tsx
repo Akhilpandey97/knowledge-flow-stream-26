@@ -9,6 +9,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     console.log('AuthContext: Setting up auth listener...');
@@ -188,8 +189,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (loggingOut) return; // Prevent multiple simultaneous logout calls
+    
+    setLoggingOut(true);
+    
+    try {
+      // Clear local state immediately for better UX
+      setUser(null);
+      setSession(null);
+      
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        // Handle common session errors gracefully
+        if (error.message.includes('session_not_found') || error.message.includes('Session not found')) {
+          console.log('Session already invalidated, logout successful');
+        } else {
+          console.error('Logout error:', error);
+          throw error;
+        }
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+      throw error;
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const value: AuthContextType = {
@@ -199,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user && !!session,
     signUp,
     loading,
+    loggingOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
