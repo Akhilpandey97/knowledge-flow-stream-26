@@ -66,32 +66,67 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
 
   const handleCreateUser = async () => {
     try {
+      // Validate form data
+      if (!formData.email.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Email is required",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        toast({
+          title: "Validation Error", 
+          description: "Please enter a valid email address",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Call edge function to create user with auth and profile
       const { data, error } = await supabase.functions.invoke('admin-user-management', {
         body: {
           action: 'create',
-          email: formData.email,
+          email: formData.email.trim(),
           role: formData.role,
           password: generatePassword(),
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to create user');
+      }
+
+      if (data && data.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
+      }
 
       toast({
         title: "Success",
-        description: "User created successfully",
+        description: `User created successfully with email: ${formData.email}`,
       });
 
       setIsCreateDialogOpen(false);
       setFormData({ email: '', role: 'exiting' });
       fetchUsers();
       onStatsUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
+      
+      let errorMessage = "Failed to create user";
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
       toast({
         title: "Error",
-        description: "Failed to create user",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -238,7 +273,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
                   <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateUser} disabled={!formData.email}>
+                  <Button onClick={handleCreateUser} disabled={!formData.email.trim() || !formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)}>
                     Create User
                   </Button>
                 </DialogFooter>

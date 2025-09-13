@@ -15,8 +15,48 @@ serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: { autoRefreshToken: false, persistSession: false }
+      }
     )
+
+    // Get the authorization header to verify the calling user
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('Authorization header is required')
+    }
+
+    // Create a client with the user's token to verify their role
+    const userSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
+    )
+
+    // Verify the user is authenticated and has admin role
+    const { data: { user: authUser }, error: authError } = await userSupabase.auth.getUser()
+    if (authError || !authUser) {
+      throw new Error('Invalid authentication')
+    }
+
+    // Check if user has admin role
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', authUser.id)
+      .single()
+
+    if (profileError || userProfile?.role !== 'admin') {
+      throw new Error('Admin privileges required')
+    }
 
     const { action, email, role, password, userId } = await req.json()
 
@@ -24,6 +64,29 @@ serve(async (req) => {
 
     switch (action) {
       case 'create': {
+        // Validate required fields
+        if (!email || !role || !password) {
+          throw new Error('Email, role, and password are required for user creation')
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(email)) {
+          throw new Error('Invalid email format')
+        }
+
+        // Validate role
+        const validRoles = ['exiting', 'successor', 'hr-manager', 'admin']
+        if (!validRoles.includes(role)) {
+          throw new Error('Invalid role. Must be one of: ' + validRoles.join(', '))
+        }
+
+        // Check if user already exists
+        const { data: existingUser } = await supabase.auth.admin.listUsers()
+        const userExists = existingUser?.users?.some(u => u.email?.toLowerCase() === email.toLowerCase())
+        if (userExists) {
+          throw new Error('User with this email already exists')
+        }
         // Create user in Supabase Auth
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
           email,
