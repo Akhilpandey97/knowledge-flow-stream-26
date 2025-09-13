@@ -87,6 +87,15 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
         return;
       }
 
+      if (formData.password.length < 6) {
+        toast({
+          title: "Validation Error",
+          description: "Password must be at least 6 characters long",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Call edge function to create user with auth and profile
       const { data, error } = await supabase.functions.invoke('admin-user-management', {
         body: {
@@ -116,11 +125,11 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
       setFormData({ email: '', role: 'exiting', password: '' });
       fetchUsers();
       onStatsUpdate();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating user:', error);
 
       let errorMessage = "Failed to create user";
-      if (error.message) {
+      if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
@@ -180,7 +189,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Enter a password"
+                placeholder="Enter a password (min. 6 characters)"
                 required
               />
             </div>

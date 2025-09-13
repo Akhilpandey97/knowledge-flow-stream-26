@@ -69,6 +69,11 @@ serve(async (req) => {
           throw new Error('Email, role, and password are required for user creation')
         }
 
+        // Validate password length  
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters long')
+        }
+
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         if (!emailRegex.test(email)) {
