@@ -141,169 +141,158 @@ export const ExitingEmployeeDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Knowledge Handover</h2>
-          <p className="text-muted-foreground">
-            Transferring knowledge to your successor
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Target className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            Target completion: <span className="font-medium">Jan 15, 2024</span>
-          </span>
-        </div>
+    <div className="max-w-4xl mx-auto space-y-8 p-6">
+      {/* Clean Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Knowledge Handover</h1>
+        <p className="text-muted-foreground text-lg">
+          Complete your knowledge transfer checklist
+        </p>
       </div>
 
-      {/* Progress Overview */}
-      <Card className="shadow-medium">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-success" />
-            Handover Progress
-          </CardTitle>
-          <CardDescription>
-            Track your knowledge transfer completion
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Overall Progress</span>
-              <span className="text-2xl font-bold text-primary">{progressPercentage}%</span>
+      {/* Progress Card */}
+      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Progress</p>
+              <p className="text-3xl font-bold">{progressPercentage}%</p>
             </div>
-            <Progress 
-              value={progressPercentage} 
-              variant={progressPercentage >= 80 ? 'success' : progressPercentage >= 50 ? 'warning' : 'critical'}
-              className="h-3"
-            />
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>{completedTasks} of {tasks.length} tasks completed</span>
-              <span>{tasks.length - completedTasks} remaining</span>
+            <div className="text-right space-y-1">
+              <p className="text-sm text-muted-foreground">{completedTasks} of {tasks.length} completed</p>
+              <p className="text-xs text-muted-foreground">{tasks.length - completedTasks} remaining</p>
             </div>
           </div>
+          <Progress value={progressPercentage} className="h-2" />
         </CardContent>
       </Card>
 
-      {/* AI Suggestion Alert */}
-      <Alert className="border-primary/20 bg-primary-soft">
-        <MessageSquare className="h-4 w-4 text-primary" />
-        <AlertDescription className="text-primary">
-          <strong>AI Suggestion:</strong> Would you like to add meeting notes from your recent client calls? 
-          This could help Sarah understand client preferences better.
-          <Button variant="soft" size="sm" className="ml-2">
-            Add Meeting Notes
-          </Button>
-          <ExportButton title="Export Progress" variant="outline" size="sm" />
-        </AlertDescription>
-      </Alert>
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-3 justify-center">
+        <Button variant="outline" size="sm" className="gap-2">
+          <MessageSquare className="h-4 w-4" />
+          Add Meeting Notes
+        </Button>
+        <ExportButton title="Export Progress" variant="outline" size="sm" />
+      </div>
 
-      {/* Tasks Checklist */}
-      <Card className="shadow-medium">
-        <CardHeader>
-          <CardTitle>Knowledge Transfer Checklist</CardTitle>
-          <CardDescription>Complete these domain-specific tasks for a smooth handover</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {tasks.map((task) => (
-              <div key={task.id} className="border rounded-lg p-4 space-y-3 hover:shadow-soft transition-shadow">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    checked={task.isCompleted}
-                    onCheckedChange={() => toggleTask(task.id)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className={`font-medium ${task.isCompleted ? 'line-through text-muted-foreground' : ''}`}>
-                        {task.title}
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getPriorityColor(task.priority) as any} className="text-xs">
-                          {task.priority}
+      {/* Tasks List */}
+      <div className="space-y-4">
+        {tasks.map((task) => (
+          <Card 
+            key={task.id} 
+            className={`transition-all duration-200 hover:shadow-md ${
+              task.isCompleted ? 'bg-muted/30' : 'bg-background'
+            }`}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                {/* Checkbox */}
+                <Checkbox
+                  checked={task.isCompleted}
+                  onCheckedChange={() => toggleTask(task.id)}
+                  className="mt-1 flex-shrink-0"
+                />
+                
+                {/* Task Content */}
+                <div className="flex-1 min-w-0 space-y-3">
+                  {/* Title and Priority */}
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className={`font-semibold text-lg leading-tight ${
+                      task.isCompleted ? 'line-through text-muted-foreground' : ''
+                    }`}>
+                      {task.title}
+                    </h3>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge variant={getPriorityColor(task.priority) as any}>
+                        {task.priority}
+                      </Badge>
+                      {task.dueDate && (
+                        <Badge variant="outline" className="gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(task.dueDate).toLocaleDateString()}
                         </Badge>
-                        {task.dueDate && (
-                          <Badge variant="outline" className="text-xs">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {new Date(task.dueDate).toLocaleDateString()}
-                          </Badge>
-                        )}
-                      </div>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">{task.description}</p>
-                    <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                      Category: {task.category}
-                    </div>
-                    
-                    {task.notes && (
-                      <div className="bg-success-soft p-3 rounded border border-success/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <FileText className="h-4 w-4 text-success" />
-                          <span className="text-sm font-medium text-success">Notes Added</span>
-                        </div>
-                        <p className="text-sm text-foreground whitespace-pre-wrap">{task.notes}</p>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedTaskId(selectedTaskId === task.id ? null : task.id)}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Notes
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => openTaskDetail(task)}
-                      >
-                        <Edit className="w-3 h-3 mr-1" />
-                        Edit Details
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Video className="w-3 h-3 mr-1" />
-                        Record Video
-                      </Button>
-                    </div>
-
-                    {selectedTaskId === task.id && (
-                      <div className="space-y-2">
-                        <Textarea
-                          placeholder="Add detailed notes about this task..."
-                          value={newNote}
-                          onChange={(e) => setNewNote(e.target.value)}
-                          className="min-h-[100px]"
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => addNote(task.id)}>
-                            Save Notes
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              setSelectedTaskId(null);
-                              setNewNote('');
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
+
+                  {/* Description */}
+                  <p className="text-muted-foreground leading-relaxed">
+                    {task.description}
+                  </p>
+
+                  {/* Category */}
+                  <div className="inline-flex items-center text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                    {task.category}
+                  </div>
+
+                  {/* Notes Display */}
+                  {task.notes && (
+                    <div className="bg-success/5 border border-success/20 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-success" />
+                        <span className="text-sm font-medium text-success">Notes</span>
+                      </div>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {task.notes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTaskId(selectedTaskId === task.id ? null : task.id)}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {task.notes ? 'Update Notes' : 'Add Notes'}
+                    </Button>
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openTaskDetail(task)}
+                      className="gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Details
+                    </Button>
+                  </div>
+
+                  {/* Note Input */}
+                  {selectedTaskId === task.id && (
+                    <div className="space-y-3 pt-3 border-t">
+                      <Textarea
+                        placeholder="Add your notes here..."
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        className="min-h-[120px]"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => addNote(task.id)}>
+                          Save Notes
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setSelectedTaskId(null);
+                            setNewNote('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       {/* Task Detail Modal */}
       <TaskDetailModal
