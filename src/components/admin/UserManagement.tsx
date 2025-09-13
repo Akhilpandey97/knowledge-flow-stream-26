@@ -33,6 +33,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
   const [formData, setFormData] = useState({
     email: '',
     role: 'exiting' as UserRole,
+    password: '',
   });
 
   useEffect(() => {
@@ -66,13 +67,15 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
 
   const handleCreateUser = async () => {
     try {
+      const password = formData.password || generatePassword();
+      
       // Call edge function to create user with auth and profile
       const { data, error } = await supabase.functions.invoke('admin-user-management', {
         body: {
           action: 'create',
           email: formData.email,
           role: formData.role,
-          password: generatePassword(),
+          password: password,
         },
       });
 
@@ -80,11 +83,13 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
 
       toast({
         title: "Success",
-        description: "User created successfully",
+        description: formData.password 
+          ? "User created successfully" 
+          : `User created successfully. Generated password: ${password}`,
       });
 
       setIsCreateDialogOpen(false);
-      setFormData({ email: '', role: 'exiting' });
+      setFormData({ email: '', role: 'exiting', password: '' });
       fetchUsers();
       onStatsUpdate();
     } catch (error) {
@@ -117,7 +122,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
       });
 
       setEditingUser(null);
-      setFormData({ email: '', role: 'exiting' });
+      setFormData({ email: '', role: 'exiting', password: '' });
       fetchUsers();
       onStatsUpdate();
     } catch (error) {
@@ -152,7 +157,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
 
   const openEditDialog = (user: User) => {
     setEditingUser(user);
-    setFormData({ email: user.email, role: user.role });
+    setFormData({ email: user.email, role: user.role, password: '' });
   };
 
   return (
@@ -232,6 +237,16 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="password">Password (optional)</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="Leave empty to generate automatically"
+                    />
                   </div>
                 </div>
                 <DialogFooter>
