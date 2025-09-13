@@ -25,7 +25,7 @@ export const StepSidebar: React.FC<StepSidebarProps> = ({
       </div>
       
       {/* Enhanced Steps List */}
-      <div className="flex-1 p-4 xl:p-6 space-y-3">
+      <div className="flex-1 p-4 xl:p-6 space-y-3 mx-[15px] px-[16px]">
         {steps.map((step, index) => <Button key={step.id} variant={currentStep === index ? "default" : "ghost"} className={`w-full h-auto p-4 xl:p-5 justify-start text-left transition-all duration-300 relative group ${currentStep === index ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02] border-l-4 border-l-primary-foreground' : step.isCompleted ? 'bg-success/10 hover:bg-success/20 border-l-4 border-l-success' : 'hover:bg-muted/60 border-l-4 border-l-transparent'}`} onClick={() => onStepClick(index)}>
             <div className="flex items-start gap-3 xl:gap-4 w-full">
               {/* Enhanced Step Indicator */}
