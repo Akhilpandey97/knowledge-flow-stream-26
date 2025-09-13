@@ -136,106 +136,151 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-white border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Knowledge Transfer</h1>
-              <p className="text-muted-foreground">
-                Step {currentStep + 1} of {stepsData.length}: {stepsData[currentStep]?.title}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Target completion: <span className="font-medium">Jan 15, 2024</span>
-                </span>
+        {/* Enhanced Header with Prominent Progress */}
+        <div className="bg-gradient-to-r from-background to-muted/20 border-b border-border/50 px-8 py-6 shadow-soft">
+          <div className="max-w-6xl mx-auto">
+            {/* Main Header Info */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight">Knowledge Transfer</h1>
+                <p className="text-lg text-muted-foreground font-medium">
+                  Step {currentStep + 1} of {stepsData.length}: {stepsData[currentStep]?.title}
+                </p>
               </div>
-              <Badge variant="outline" className="text-sm">
-                {completedSteps}/{stepsData.length} Complete
-              </Badge>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 px-4 py-2 bg-background/80 rounded-lg border border-border/50">
+                  <Target className="h-5 w-5 text-primary" />
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground">Target completion</div>
+                    <div className="text-base font-semibold text-foreground">Jan 15, 2024</div>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-base px-4 py-2 font-semibold border-primary/30 bg-primary/5">
+                  {completedSteps}/{stepsData.length} Complete
+                </Badge>
+              </div>
             </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Overall Progress</span>
-              <span className="text-sm font-bold text-primary">{progressPercentage}%</span>
+            
+            {/* Enhanced Progress Bar */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">Overall Progress</h3>
+                <div className="text-2xl font-bold text-primary">{progressPercentage}%</div>
+              </div>
+              <div className="relative">
+                <Progress 
+                  value={progressPercentage} 
+                  variant={progressPercentage >= 80 ? 'success' : progressPercentage >= 50 ? 'warning' : 'critical'}
+                  className="h-4 shadow-sm"
+                />
+                {/* Progress milestones */}
+                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                  <span>Start</span>
+                  <span>25%</span>
+                  <span>50%</span>
+                  <span>75%</span>
+                  <span>Complete</span>
+                </div>
+              </div>
             </div>
-            <Progress 
-              value={progressPercentage} 
-              variant={progressPercentage >= 80 ? 'success' : progressPercentage >= 50 ? 'warning' : 'critical'}
-              className="h-2"
-            />
           </div>
         </div>
 
-        {/* Step Content */}
-        <div className="flex-1 overflow-auto p-6">
-          <div className="max-w-4xl mx-auto">
+        {/* Enhanced Step Content */}
+        <div className="flex-1 overflow-auto bg-muted/10">
+          <div className="max-w-5xl mx-auto px-8 py-8">
             {/* Step Header */}
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                {getStepIcon(currentStep)}
-                <h2 className="text-xl font-semibold">{stepsData[currentStep]?.title}</h2>
-                {stepsData[currentStep]?.isCompleted && (
-                  <CheckCircle className="h-5 w-5 text-success" />
-                )}
+            <div className="mb-8 bg-background rounded-xl p-6 border border-border/50 shadow-soft">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  {getStepIcon(currentStep)}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-foreground">{stepsData[currentStep]?.title}</h2>
+                  {stepsData[currentStep]?.isCompleted && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <CheckCircle className="h-5 w-5 text-success" />
+                      <span className="text-sm font-medium text-success">Completed</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p className="text-muted-foreground">{stepsData[currentStep]?.description}</p>
+              <p className="text-muted-foreground text-lg leading-relaxed">{stepsData[currentStep]?.description}</p>
             </div>
 
-            {/* AI Suggestion */}
+            {/* Enhanced AI Suggestion */}
             {currentStep === 0 && (
-              <Alert className="mb-6 border-primary/20 bg-primary-soft">
-                <Target className="h-4 w-4 text-primary" />
-                <AlertDescription className="text-primary">
-                  <strong>AI Suggestion:</strong> Start by documenting your highest-value client relationships first. 
-                  This will help your successor prioritize their initial outreach.
-                </AlertDescription>
-              </Alert>
+              <div className="mb-8">
+                <Alert className="border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 shadow-soft">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-primary/15 rounded-lg mt-1">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <AlertDescription className="text-primary text-base leading-relaxed">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-bold text-primary">💡 AI Suggestion</span>
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                          Smart Tip
+                        </Badge>
+                      </div>
+                      <p>Start by documenting your highest-value client relationships first. This will help your successor prioritize their initial outreach.</p>
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              </div>
             )}
 
             {/* Step Content */}
-            {renderCurrentStep()}
-
-            {/* Navigation */}
-            <div className="flex justify-between items-center mt-8 pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={handlePrevStep}
-                disabled={currentStep === 0}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Previous Step
-              </Button>
-              
-              <div className="flex items-center gap-2">
-                {stepsData.map((_, index) => (
-                  <div
-                    key={index}
-                    className={`w-2 h-2 rounded-full ${
-                      index === currentStep
-                        ? 'bg-primary'
-                        : index < currentStep
-                        ? 'bg-success'
-                        : 'bg-muted'
-                    }`}
-                  />
-                ))}
+            <div className="bg-background rounded-xl border border-border/50 shadow-soft overflow-hidden">
+              <div className="p-8">
+                {renderCurrentStep()}
               </div>
+            </div>
 
-              <Button
-                onClick={handleNextStep}
-                disabled={currentStep === stepsData.length - 1}
-                className="flex items-center gap-2"
-              >
-                Next Step
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+            {/* Enhanced Navigation */}
+            <div className="mt-10 pt-8 border-t border-border/50">
+              <div className="flex justify-between items-center">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  disabled={currentStep === 0}
+                  className="flex items-center gap-3 px-6 py-3 text-base font-medium"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Previous Step
+                </Button>
+                
+                {/* Step Indicators */}
+                <div className="flex items-center gap-3">
+                  {stepsData.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`relative flex items-center justify-center w-10 h-10 rounded-full font-medium text-sm transition-all duration-300 ${
+                        index === currentStep
+                          ? 'bg-primary text-primary-foreground shadow-md scale-110'
+                          : index < currentStep
+                          ? 'bg-success text-white shadow-sm'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {index < currentStep ? (
+                        <CheckCircle className="h-5 w-5" />
+                      ) : (
+                        <span>{index + 1}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  onClick={handleNextStep}
+                  disabled={currentStep === stepsData.length - 1}
+                  className="flex items-center gap-3 px-6 py-3 text-base font-medium"
+                >
+                  Next Step
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
