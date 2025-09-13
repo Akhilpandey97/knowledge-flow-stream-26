@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../supabaseClient';
-import { Input } from '../ui/Input';
-import { Label } from '../ui/Label';
+import { supabase } from '../../integrations/supabase/client';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { toast } from '../ui/use-toast';
 
 type UserRole = 'exiting' | 'successor' | 'hr-manager' | 'admin';
@@ -12,7 +12,7 @@ interface User {
   role: UserRole;
 }
 
-const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate }) => {
+export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
@@ -87,6 +87,15 @@ const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate
         return;
       }
 
+      if (formData.password.length < 6) {
+        toast({
+          title: "Validation Error",
+          description: "Password must be at least 6 characters long",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Call edge function to create user with auth and profile
       const { data, error } = await supabase.functions.invoke('admin-user-management', {
         body: {
@@ -116,11 +125,11 @@ const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate
       setFormData({ email: '', role: 'exiting', password: '' });
       fetchUsers();
       onStatsUpdate();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating user:', error);
 
       let errorMessage = "Failed to create user";
-      if (error.message) {
+      if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
@@ -180,7 +189,7 @@ const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Enter a password"
+                placeholder="Enter a password (min. 6 characters)"
                 required
               />
             </div>
@@ -222,4 +231,4 @@ const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate
   );
 };
 
-export default UserManagement;
+
