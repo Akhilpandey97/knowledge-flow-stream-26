@@ -28,6 +28,13 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
     setLoading(true);
     try {
       const { data, error } = await supabase.from('users').select('*');
+      
+      // Debug logging (development mode only)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('UserManagement fetchUsers - Data:', data);
+        console.log('UserManagement fetchUsers - Error:', error);
+      }
+      
       if (error) throw error;
       setUsers((data || []).map((user) => ({
         id: user.id,
@@ -226,7 +233,57 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
         </button>
       </div>
       {renderCreateUserDialog()}
-      {/* ...other UI code for user list, etc. */}
+      
+      {/* Users Table */}
+      <div className="mt-6">
+        {loading ? (
+          <div className="text-center py-8">Loading users...</div>
+        ) : users.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-lg mb-2">No users found. Add a user to get started.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button
+                        onClick={() => setEditingUser(user)}
+                        className="text-indigo-600 hover:text-indigo-900 mr-3"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
