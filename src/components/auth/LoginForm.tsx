@@ -13,8 +13,7 @@ export const LoginForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const { login, signUp } = useAuth();
+  const { login } = useAuth();
 
   useEffect(() => {
     try {
@@ -35,15 +34,9 @@ export const LoginForm: React.FC = () => {
     setError('');
 
     try {
-      if (isSignUp && signUp) {
-        await signUp(email, password);
-        setError('');
-        alert('Check your email for the confirmation link!');
-      } else {
-        await login(email, password);
-      }
+      await login(email, password);
     } catch (err: any) {
-      setError(err.message || (isSignUp ? 'Failed to create account' : 'Invalid email or password'));
+      setError(err.message || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
@@ -106,20 +99,11 @@ export const LoginForm: React.FC = () => {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isSignUp ? 'Creating account...' : 'Signing in...'}
+                    Signing in...
                   </>
                 ) : (
-                  isSignUp ? 'Create Account' : 'Sign in'
+                  'Sign in'
                 )}
-              </Button>
-              
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => setIsSignUp(!isSignUp)}
-              >
-                {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
               </Button>
             </form>
           </CardContent>
