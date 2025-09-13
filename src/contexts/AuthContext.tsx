@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
           return;
         }
-        
+
         setSession(session);
         if (session?.user) {
           console.log('AuthContext: Found existing session, fetching profile...');
