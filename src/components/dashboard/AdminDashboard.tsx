@@ -8,37 +8,39 @@ import { toast } from '@/hooks/use-toast';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { IntegrationsManager } from '@/components/admin/IntegrationsManager';
+
 export const AdminDashboard = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     exitingEmployees: 0,
     successors: 0,
     hrManagers: 0,
-    activeHandovers: 0
+    activeHandovers: 0,
   });
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     fetchStats();
   }, []);
+
   const fetchStats = async () => {
     try {
       setLoading(true);
-
+      
       // Fetch user counts by role
-      const {
-        data: users,
-        error: usersError
-      } = await supabase.from('users').select('role');
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('role');
+      
       if (usersError) throw usersError;
 
       // Fetch active handovers count
-      const {
-        data: handovers,
-        error: handoversError
-      } = await supabase.from('handovers').select('id').lt('progress', 100);
+      const { data: handovers, error: handoversError } = await supabase
+        .from('handovers')
+        .select('id')
+        .lt('progress', 100);
+      
       if (handoversError) throw handoversError;
 
       // Calculate stats
@@ -46,25 +48,28 @@ export const AdminDashboard = () => {
         acc[user.role] = (acc[user.role] || 0) + 1;
         return acc;
       }, {} as Record<string, number>) || {};
+
       setStats({
         totalUsers: users?.length || 0,
         exitingEmployees: roleStats.exiting || 0,
         successors: roleStats.successor || 0,
         hrManagers: roleStats['hr-manager'] || 0,
-        activeHandovers: handovers?.length || 0
+        activeHandovers: handovers?.length || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
       toast({
         title: "Error",
         description: "Failed to load dashboard statistics",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-  return <div className="container mx-auto p-6 space-y-6">
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -81,7 +86,20 @@ export const AdminDashboard = () => {
       <AdminStats stats={stats} loading={loading} />
 
       <Tabs defaultValue="users" className="w-full">
-        
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            User Management
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Integrations
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Activity Log
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="users" className="space-y-6">
           <UserManagement onStatsUpdate={fetchStats} />
@@ -92,8 +110,21 @@ export const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6">
-          
+          <Card>
+            <CardHeader>
+              <CardTitle>System Activity Log</CardTitle>
+              <CardDescription>
+                Recent system activities and user actions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                Activity logging will be implemented in a future update
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
-    </div>;
+    </div>
+  );
 };
