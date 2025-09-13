@@ -23,7 +23,7 @@ import { InternalWorkflowsStep } from './steps/InternalWorkflowsStep';
 import { PendingTasksStep } from './steps/PendingTasksStep';
 
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
-  const [hasUploadedInSession, setHasUploadedInSession] = useState(true); // Set to true for demo
+  const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
   // Initialize steps data
