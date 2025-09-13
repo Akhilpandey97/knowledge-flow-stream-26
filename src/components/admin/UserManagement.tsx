@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../supabaseClient';
-import { Input } from '../ui/Input';
-import { Label } from '../ui/Label';
+import { supabase } from '../../integrations/supabase/client';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { toast } from '../ui/use-toast';
 
 type UserRole = 'exiting' | 'successor' | 'hr-manager' | 'admin';
@@ -12,7 +12,7 @@ interface User {
   role: UserRole;
 }
 
-const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate }) => {
+export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
@@ -222,4 +222,4 @@ const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate
   );
 };
 
-export default UserManagement;
+
