@@ -166,6 +166,36 @@ export type Database = {
           },
         ]
       }
+      user_document_uploads: {
+        Row: {
+          created_at: string
+          file_path: string
+          filename: string
+          id: string
+          uploaded_at: string
+          user_id: string
+          webhook_sent: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          filename: string
+          id?: string
+          uploaded_at?: string
+          user_id: string
+          webhook_sent?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          filename?: string
+          id?: string
+          uploaded_at?: string
+          user_id?: string
+          webhook_sent?: boolean | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string | null
