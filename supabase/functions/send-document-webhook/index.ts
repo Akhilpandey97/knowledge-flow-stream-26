@@ -79,10 +79,51 @@ serve(async (req) => {
       throw new Error(`Webhook failed: ${webhookResponse.status} - ${errorText}`);
     }
 
-    // Update database to mark webhook as sent
+    // Parse the webhook response to extract insights
+    const webhookResponseData = await webhookResponse.json();
+    console.log('Webhook response data:', JSON.stringify(webhookResponseData, null, 2));
+
+    // Extract insights from response (fallback to entire response if no "insights" field)
+    const insights = webhookResponseData.insights || webhookResponseData;
+
+    // Initialize Supabase client
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.57.4');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get user_id from user_document_uploads via file_path
+    const { data: uploadData, error: uploadError } = await supabase
+      .from('user_document_uploads')
+      .select('user_id')
+      .eq('file_path', filePath)
+      .single();
+
+    if (uploadError) {
+      console.error('Error fetching user_id from uploads:', uploadError);
+      throw new Error(`Failed to get user_id: ${uploadError.message}`);
+    }
+
+    if (!uploadData?.user_id) {
+      console.error('No user_id found for file_path:', filePath);
+      throw new Error(`No user_id found for file_path: ${filePath}`);
+    }
+
+    // Store insights in ai_knowledge_insights table
+    const { error: insightsError } = await supabase
+      .from('ai_knowledge_insights')
+      .insert({
+        user_id: uploadData.user_id,
+        file_path: filePath,
+        insights: insights
+      });
+
+    if (insightsError) {
+      console.error('Error storing AI insights:', insightsError);
+      // Don't fail the entire process if insights storage fails
+    } else {
+      console.log('AI insights stored successfully for user:', uploadData.user_id);
+    }
+
+    // Update database to mark webhook as sent
     const { error: updateError } = await supabase
       .from('user_document_uploads')
       .update({ webhook_sent: true })

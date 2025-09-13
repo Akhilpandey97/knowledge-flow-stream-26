@@ -53,6 +53,48 @@ export type Database = {
           },
         ]
       }
+      ai_knowledge_insights: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          insights: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          insights: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          insights?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_knowledge_insights_file_path_fkey"
+            columns: ["file_path"]
+            isOneToOne: false
+            referencedRelation: "user_document_uploads"
+            referencedColumns: ["file_path"]
+          },
+          {
+            foreignKeyName: "ai_knowledge_insights_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string | null
