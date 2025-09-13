@@ -229,6 +229,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onStatsUpdate })
                         <SelectItem value="exiting">Exiting Employee</SelectItem>
                         <SelectItem value="successor">Successor</SelectItem>
                         <SelectItem value="hr-manager">HR Manager</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
