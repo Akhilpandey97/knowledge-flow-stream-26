@@ -1,0 +1,2 @@
+-- Update password for admin user ap79020@gmail.com
+-- This needs to be done through Supabase Auth Admin API, which we'll handle in the edge function
