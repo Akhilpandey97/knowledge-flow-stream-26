@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,46 +12,55 @@ serve(async (req) => {
   }
 
   try {
-    const { filePath, fileName, userId } = await req.json();
-
-    console.log('Processing webhook request:', { filePath, fileName, userId });
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Download the file from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('handover-documents')
-      .download(filePath);
-
-    if (downloadError) {
-      console.error('Error downloading file:', downloadError);
-      throw new Error(`Failed to download file: ${downloadError.message}`);
+    const { filePath, filename } = await req.json();
+    
+    if (!filePath || !filename) {
+      return new Response(
+        JSON.stringify({ error: 'Missing filePath or filename' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
-    // Convert file to base64 for webhook
-    const arrayBuffer = await fileData.arrayBuffer();
-    const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    console.log(`Processing document: ${filename} at path: ${filePath}`);
 
-    // Get webhook URL and secret
-    const webhookUrl = 'https://public.lindy.ai/api/v1/webhooks/lindy/f9932f28-d25e-4eb2-aad8-7a1d2daac746';
-    const webhookSecret = Deno.env.get('LINDY_WEBHOOK_SECRET')!;
+    // Get the document content from Supabase Storage
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const storageResponse = await fetch(
+      `${supabaseUrl}/storage/v1/object/handover-documents/${filePath}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+        },
+      }
+    );
+
+    if (!storageResponse.ok) {
+      throw new Error(`Failed to fetch document: ${storageResponse.statusText}`);
+    }
+
+    const documentBuffer = await storageResponse.arrayBuffer();
+    const base64Content = btoa(String.fromCharCode(...new Uint8Array(documentBuffer)));
 
     // Prepare webhook payload
     const webhookPayload = {
-      timestamp: new Date().toISOString(),
-      userId: userId,
-      fileName: fileName,
+      filename: filename,
+      content: base64Content,
       filePath: filePath,
-      fileContent: base64Content,
-      contentType: fileData.type || 'application/octet-stream'
+      timestamp: new Date().toISOString(),
+      source: 'handover-system'
     };
+
+    // Send to webhook
+    const webhookUrl = 'https://public.lindy.ai/api/v1/webhooks/lindy/f9932f28-d25e-4eb2-aad8-7a1d2daac746';
+    const webhookSecret = Deno.env.get('LINDY_WEBHOOK_SECRET')!;
 
     console.log('Sending webhook to:', webhookUrl);
 
-    // Send webhook
     const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -60,43 +68,41 @@ serve(async (req) => {
         'Authorization': `Bearer ${webhookSecret}`,
         'X-Webhook-Secret': webhookSecret,
       },
-      body: JSON.stringify(webhookPayload),
+      body: JSON.stringify(webhookPayload)
     });
 
     console.log('Webhook response status:', webhookResponse.status);
-
+    
     if (!webhookResponse.ok) {
       const errorText = await webhookResponse.text();
       console.error('Webhook failed:', errorText);
-      throw new Error(`Webhook failed with status ${webhookResponse.status}: ${errorText}`);
+      throw new Error(`Webhook failed: ${webhookResponse.status} - ${errorText}`);
     }
 
     // Update database to mark webhook as sent
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.57.4');
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const { error: updateError } = await supabase
       .from('user_document_uploads')
       .update({ webhook_sent: true })
-      .eq('user_id', userId)
       .eq('file_path', filePath);
 
     if (updateError) {
       console.error('Error updating webhook status:', updateError);
-      // Don't throw here as webhook was successful
     }
 
-    const responseText = await webhookResponse.text();
-    console.log('Webhook response:', responseText);
+    console.log('Document webhook sent successfully');
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Document processed and webhook sent successfully',
-        webhookResponse: responseText 
+        message: 'Document webhook sent successfully',
+        filename: filename
       }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
 
@@ -105,15 +111,12 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        success: false, 
-        error: error.message 
+        error: 'Internal server error',
+        message: error.message
       }),
       { 
-        status: 500,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }

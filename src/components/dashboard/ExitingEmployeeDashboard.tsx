@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -24,48 +24,18 @@ import { ExportButton } from '@/components/ui/export-button';
 import { useHandover } from '@/hooks/useHandover';
 import { useToast } from '@/components/ui/use-toast';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 
 export const ExitingEmployeeDashboard: React.FC = () => {
   const { tasks, loading, error, updateTask } = useHandover();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { hasUploadedDocument, loading: uploadLoading, markDocumentUploaded } = useDocumentUpload();
   const [newNote, setNewNote] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [hasUploadedDocument, setHasUploadedDocument] = useState(false);
-  const [checkingUpload, setCheckingUpload] = useState(true);
   const [taskDetailModal, setTaskDetailModal] = useState<{ isOpen: boolean; task: HandoverTask | null }>({
     isOpen: false,
     task: null
   });
-
-  // Check if user has uploaded a document
-  useEffect(() => {
-    const checkDocumentUpload = async () => {
-      if (!user) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('user_document_uploads')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        if (error) {
-          console.error('Error checking document upload:', error);
-        } else {
-          setHasUploadedDocument(data && data.length > 0);
-        }
-      } catch (error) {
-        console.error('Error checking document upload:', error);
-      } finally {
-        setCheckingUpload(false);
-      }
-    };
-
-    checkDocumentUpload();
-  }, [user]);
 
   const toggleTask = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
@@ -142,29 +112,12 @@ export const ExitingEmployeeDashboard: React.FC = () => {
   const completedTasks = tasks.filter(task => task.isCompleted).length;
   const progressPercentage = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
-  // Show document upload screen if user hasn't uploaded a document yet
-  if (checkingUpload) {
+  // Show loading while checking document upload status
+  if (uploadLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Checking upload status...</span>
-      </div>
-    );
-  }
-
-  if (!hasUploadedDocument) {
-    return (
-      <DocumentUploadScreen 
-        onUploadComplete={() => setHasUploadedDocument(true)} 
-      />
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading handover data...</span>
+        <span className="ml-2">Loading...</span>
       </div>
     );
   }
@@ -176,6 +129,15 @@ export const ExitingEmployeeDashboard: React.FC = () => {
           Error loading handover data: {error}
         </AlertDescription>
       </Alert>
+    );
+  }
+
+  // Show document upload screen if no document has been uploaded
+  if (hasUploadedDocument === false) {
+    return (
+      <DocumentUploadScreen 
+        onUploadComplete={markDocumentUploaded}
+      />
     );
   }
 

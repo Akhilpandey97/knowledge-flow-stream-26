@@ -1,199 +1,252 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface DocumentUploadScreenProps {
   onUploadComplete: () => void;
 }
 
 export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUploadComplete }) => {
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [dragOver, setDragOver] = useState(false);
-  const { toast } = useToast();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const handleFileUpload = async (files: FileList) => {
-    if (!files || files.length === 0) return;
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  }, []);
+
+  const handleFileUpload = async (file: File) => {
     if (!user) {
       toast({
-        title: 'Error',
-        description: 'You must be logged in to upload documents.',
-        variant: 'destructive',
+        title: "Error",
+        description: "You must be logged in to upload documents.",
+        variant: "destructive",
       });
       return;
     }
 
-    const file = files[0];
-    setUploading(true);
+    // Validate file size (20MB limit)
+    if (file.size > 20 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select a file smaller than 20MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
     setUploadProgress(0);
+    setUploadedFile(file);
 
     try {
+      // Create file path with user ID
+      const filePath = `${user.id}/${Date.now()}-${file.name}`;
+
       // Upload file to Supabase Storage
-      const fileName = `${user.id}/${Date.now()}-${file.name}`;
       const { data, error: uploadError } = await supabase.storage
         .from('handover-documents')
-        .upload(fileName, file);
+        .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
 
-      setUploadProgress(50);
+      if (uploadError) {
+        clearInterval(progressInterval);
+        throw uploadError;
+      }
 
-      // Record the upload in database
+      setUploadProgress(100);
+
+      // Record upload in database
       const { error: dbError } = await supabase
         .from('user_document_uploads')
         .insert({
           user_id: user.id,
           filename: file.name,
-          file_path: data.path,
+          file_path: filePath
         });
 
-      if (dbError) throw dbError;
-
-      setUploadProgress(75);
+      if (dbError) {
+        throw dbError;
+      }
 
       // Send document content via webhook
       const { error: webhookError } = await supabase.functions.invoke('send-document-webhook', {
-        body: { 
-          filePath: data.path,
-          fileName: file.name,
-          userId: user.id 
-        }
+        body: { filePath, filename: file.name }
       });
 
       if (webhookError) {
         console.error('Webhook error:', webhookError);
         // Don't fail the upload if webhook fails, just log it
-        toast({
-          title: 'Upload Complete',
-          description: 'Document uploaded successfully. Webhook notification may have failed.',
-          variant: 'default',
-        });
-      } else {
-        toast({
-          title: 'Upload Complete',
-          description: 'Document uploaded and processed successfully.',
-        });
       }
 
-      setUploadProgress(100);
-      
-      // Wait a moment to show completion
+      toast({
+        title: "Document uploaded successfully",
+        description: "Your document has been uploaded and processed.",
+      });
+
+      // Wait a moment for user to see success, then proceed
       setTimeout(() => {
         onUploadComplete();
-      }, 1000);
+      }, 2000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
       toast({
-        title: 'Upload Failed',
-        description: 'Failed to upload document. Please try again.',
-        variant: 'destructive',
+        title: "Upload failed",
+        description: error.message || "Failed to upload document. Please try again.",
+        variant: "destructive",
       });
-    } finally {
-      setUploading(false);
+      setIsUploading(false);
+      setUploadProgress(0);
+      setUploadedFile(null);
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    handleFileUpload(e.dataTransfer.files);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <Card className="w-full max-w-2xl shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Upload Knowledge Transfer Document</CardTitle>
-          <CardDescription>
-            Please upload your knowledge transfer document to begin the handover process.
-            This document will be processed and shared with relevant stakeholders.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!uploading ? (
-            <div
-              className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
-                dragOver
-                  ? 'border-primary bg-primary/5'
-                  : 'border-muted-foreground/25 hover:border-primary/50'
-              }`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Upload Your Document</h3>
-              <p className="text-muted-foreground mb-4">
-                Drag and drop your file here, or click to browse
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                Supported formats: PDF, DOC, DOCX, TXT (Max 20MB)
-              </p>
-              <Button
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.pdf,.doc,.docx,.txt';
-                  input.onchange = (e) => {
-                    const files = (e.target as HTMLInputElement).files;
-                    if (files) handleFileUpload(files);
-                  };
-                  input.click();
-                }}
-                className="w-full max-w-xs"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Choose File
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="text-center">
-                <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Processing Your Document</h3>
-                <p className="text-muted-foreground">
-                  Please wait while we upload and process your document...
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Upload Progress</span>
-                  <span>{uploadProgress}%</span>
-                </div>
-                <Progress value={uploadProgress} className="h-2" />
-              </div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted/20">
+      <div className="w-full max-w-2xl space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-foreground">Document Upload Required</h1>
+          <p className="text-muted-foreground text-lg">
+            Please upload your handover document to proceed to the dashboard.
+          </p>
+        </div>
 
-              {uploadProgress === 100 && (
-                <Alert className="border-success bg-success/5">
-                  <CheckCircle className="h-4 w-4 text-success" />
-                  <AlertDescription className="text-success">
-                    Document uploaded successfully! Redirecting to dashboard...
+        {/* Upload Card */}
+        <Card className="shadow-elegant">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Upload Your Document
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {!isUploading ? (
+              <>
+                {/* Drag and Drop Area */}
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                    isDragging
+                      ? 'border-primary bg-primary/5 scale-105'
+                      : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/10'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">Drag and drop your document here</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Supports PDF, Word documents, and other common formats
+                  </p>
+                  <div className="space-y-2">
+                    <Button variant="outline" className="relative">
+                      <input
+                        type="file"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        accept=".pdf,.doc,.docx,.txt,.md"
+                        onChange={handleFileSelect}
+                      />
+                      Choose File
+                    </Button>
+                    <p className="text-xs text-muted-foreground">Maximum file size: 20MB</p>
+                  </div>
+                </div>
+
+                {/* Instructions */}
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Once uploaded, your document will be processed and sent for analysis. 
+                    You'll then be able to access your knowledge handover dashboard.
                   </AlertDescription>
                 </Alert>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </>
+            ) : (
+              /* Upload Progress */
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  {uploadProgress === 100 ? (
+                    <CheckCircle className="h-5 w-5 text-success" />
+                  ) : (
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  )}
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-sm font-medium">
+                        {uploadProgress === 100 ? 'Processing...' : 'Uploading...'}
+                      </p>
+                      <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
+                  </div>
+                </div>
+                
+                {uploadedFile && (
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{uploadedFile.name}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {Math.round(uploadedFile.size / 1024)} KB
+                    </span>
+                  </div>
+                )}
+
+                {uploadProgress === 100 && (
+                  <Alert className="border-success/20 bg-success-soft">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <AlertDescription className="text-success">
+                      Document uploaded successfully! Redirecting to dashboard...
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
