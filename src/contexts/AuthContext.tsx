@@ -142,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       case 'employee': return 'exiting';
       case 'manager': return 'hr-manager';
       // New role mapping
+      case 'admin': return 'admin';
       case 'exiting': return 'exiting';
       case 'successor': return 'successor';
       case 'hr-manager': return 'hr-manager';
@@ -155,6 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       case 'employee': return 'Sales';
       case 'manager': return 'Human Resources';
       // New role mapping
+      case 'admin': return 'Administration';
       case 'exiting': return 'Sales';
       case 'successor': return 'Sales';
       case 'hr-manager': return 'Human Resources';
