@@ -12,11 +12,13 @@ import {
   CheckCircle,
   FileText,
   Video,
-  User
+  User,
+  Loader2
 } from 'lucide-react';
 import { ChatModal } from './ChatModal';
 import { EscalationModal } from './EscalationModal';
 import { ExportButton } from '@/components/ui/export-button';
+import { useAIInsights } from '@/hooks/useAIInsights';
 
 const mockHandoverData = {
   exitingEmployeeName: 'John Doe',
@@ -67,6 +69,7 @@ const mockHandoverData = {
 export const SuccessorDashboard: React.FC = () => {
   const [chatModal, setChatModal] = useState(false);
   const [escalationModal, setEscalationModal] = useState(false);
+  const { insights, loading: insightsLoading, error: insightsError } = useAIInsights();
   const daysUntilTarget = Math.ceil((new Date('2024-01-15').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
@@ -139,59 +142,50 @@ export const SuccessorDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Focus on Client Renewals */}
-            <div className="flex items-start gap-4 p-4 border rounded-lg bg-card">
-              <div className="p-2 bg-critical-soft rounded-lg">
-                <div className="w-5 h-5 bg-critical rounded-full flex items-center justify-center">
-                  <span className="text-xs text-white">🎯</span>
-                </div>
+            {insightsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span className="text-muted-foreground">Loading AI insights...</span>
               </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="font-medium text-foreground">Focus on Client Renewals</h4>
-                    <p className="text-sm text-muted-foreground">Q1 renewal pipeline requires immediate attention - 3 high-value accounts at risk</p>
+            ) : insightsError ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="h-8 w-8 text-warning mx-auto mb-2" />
+                <p className="text-muted-foreground">Failed to load AI insights</p>
+                <p className="text-sm text-muted-foreground">{insightsError}</p>
+              </div>
+            ) : insights.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">🤖</span>
+                </div>
+                <h4 className="font-medium text-foreground mb-2">No AI insights yet</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload documents to get personalized knowledge transfer insights from AI analysis.
+                </p>
+                <Button variant="outline" size="sm">
+                  Upload Documents
+                </Button>
+              </div>
+            ) : (
+              insights.map((insight) => (
+                <div key={insight.id} className="flex items-start gap-4 p-4 border rounded-lg bg-card">
+                  <div className={`p-2 rounded-lg ${getInsightBgClass(insight.type)}`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${getInsightIconBgClass(insight.type)}`}>
+                      <span className="text-xs text-white">{insight.icon}</span>
+                    </div>
                   </div>
-                  <Badge variant="secondary" className="ml-2 text-xs">AI</Badge>
-                </div>
-              </div>
-            </div>
-
-            {/* Key Knowledge Gap */}
-            <div className="flex items-start gap-4 p-4 border rounded-lg bg-card">
-              <div className="p-2 bg-warning-soft rounded-lg">
-                <div className="w-5 h-5 bg-warning rounded-full flex items-center justify-center">
-                  <span className="text-xs text-white">🧩</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="font-medium text-foreground">Key Knowledge Gap</h4>
-                    <p className="text-sm text-muted-foreground">CRM automation rules are 65% complete - request detailed walkthrough session</p>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-medium text-foreground">{insight.title}</h4>
+                        <p className="text-sm text-muted-foreground">{insight.description}</p>
+                      </div>
+                      <Badge variant="secondary" className="ml-2 text-xs">AI</Badge>
+                    </div>
                   </div>
-                  <Badge variant="secondary" className="ml-2 text-xs">AI</Badge>
                 </div>
-              </div>
-            </div>
-
-            {/* Quick Win Available */}
-            <div className="flex items-start gap-4 p-4 border rounded-lg bg-card">
-              <div className="p-2 bg-success-soft rounded-lg">
-                <div className="w-5 h-5 bg-success rounded-full flex items-center justify-center">
-                  <span className="text-xs text-white">📈</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="font-medium text-foreground">Quick Win Available</h4>
-                    <p className="text-sm text-muted-foreground">Stakeholder introductions can be fast-tracked - 2 key contacts available this week</p>
-                  </div>
-                  <Badge variant="secondary" className="ml-2 text-xs">AI</Badge>
-                </div>
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -338,4 +332,31 @@ export const SuccessorDashboard: React.FC = () => {
       />
     </div>
   );
+};
+
+// Helper functions for insight styling
+const getInsightBgClass = (type: string): string => {
+  switch (type) {
+    case 'critical':
+      return 'bg-critical-soft';
+    case 'warning':
+      return 'bg-warning-soft';
+    case 'success':
+      return 'bg-success-soft';
+    default:
+      return 'bg-muted';
+  }
+};
+
+const getInsightIconBgClass = (type: string): string => {
+  switch (type) {
+    case 'critical':
+      return 'bg-critical';
+    case 'warning':
+      return 'bg-warning';
+    case 'success':
+      return 'bg-success';
+    default:
+      return 'bg-primary';
+  }
 };
