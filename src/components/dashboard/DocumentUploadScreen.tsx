@@ -223,6 +223,63 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
           <CardContent className="space-y-6">
             {!isUploading ? <>
                 {/* Successor Selection */}
+                <div className="space-y-3">
+                  <Label htmlFor="successor-select" className="text-sm font-semibold text-foreground">
+                    Select Successor *
+                  </Label>
+                  {error ? (
+                    <div className="space-y-2">
+                      <Alert className="border-destructive/20 bg-destructive/10">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription className="text-destructive">
+                          Failed to load available successors: {error}
+                        </AlertDescription>
+                      </Alert>
+                      <Button 
+                        variant="outline" 
+                        onClick={retry}
+                        disabled={usersLoading}
+                        className="w-full"
+                      >
+                        {usersLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Retrying...
+                          </>
+                        ) : (
+                          'Retry Loading Users'
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select value={selectedSuccessor} onValueChange={setSelectedSuccessor}>
+                      <SelectTrigger id="successor-select" className="h-12 bg-background">
+                        <SelectValue placeholder={
+                          usersLoading ? "Loading available successors..." : 
+                          users.length === 0 ? "No available successors" :
+                          "Choose a successor for your handover"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border shadow-lg z-50">
+                        {users.map((successor) => (
+                          <SelectItem 
+                            key={successor.id} 
+                            value={successor.id}
+                            className="hover:bg-muted cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <span className="font-medium">{successor.email}</span>
+                                <span className="text-xs text-muted-foreground ml-2 capitalize">({successor.role})</span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
                 
                 {/* Drag and Drop Area */}
                 <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${isDragging ? 'border-primary bg-primary/5 scale-105' : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/10'}`} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
