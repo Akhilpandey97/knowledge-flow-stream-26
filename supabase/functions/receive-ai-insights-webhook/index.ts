@@ -59,7 +59,23 @@ serve(async (req: Request) => {
       userId = userId || payload.metadata.userId;
     }
 
-    // If still no handover_id, try to derive from user_id or file_path
+    // Normalize userId: if it's an email, convert it to UUID
+    if (userId && userId.includes('@')) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', userId)
+        .limit(1)
+        .maybeSingle();
+      
+      if (userData) {
+        userId = userData.id;
+      } else {
+        console.warn(`User not found for email: ${userId}`);
+      }
+    }
+
+    // If still no handover_id, try to derive from user_id
     if (!handoverId && userId) {
       const { data: handoverData } = await supabase
         .from('handovers')
