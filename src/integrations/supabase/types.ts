@@ -74,27 +74,30 @@ export type Database = {
       ai_knowledge_insights_complex: {
         Row: {
           created_at: string
-          file_path: string
+          file_path: string | null
+          handover_id: string | null
           id: string
           insights: Json
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
-          file_path: string
+          file_path?: string | null
+          handover_id?: string | null
           id?: string
           insights: Json
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
-          file_path?: string
+          file_path?: string | null
+          handover_id?: string | null
           id?: string
           insights?: Json
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -103,6 +106,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "user_document_uploads"
             referencedColumns: ["file_path"]
+          },
+          {
+            foreignKeyName: "ai_knowledge_insights_complex_handover_id_fkey"
+            columns: ["handover_id"]
+            isOneToOne: false
+            referencedRelation: "handovers"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "ai_knowledge_insights_complex_user_id_fkey"
