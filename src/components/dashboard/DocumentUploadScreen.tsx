@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileText, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, FileText, CheckCircle, Loader2, AlertTriangle, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useUsers } from '@/hooks/useUsers';
 
 interface DocumentUploadScreenProps {
   onUploadComplete: () => void;
@@ -15,10 +18,12 @@ interface DocumentUploadScreenProps {
 export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUploadComplete }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { users, loading: usersLoading } = useUsers();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -51,6 +56,16 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
       toast({
         title: "Error",
         description: "You must be logged in to upload documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate successor selection
+    if (!selectedSuccessor) {
+      toast({
+        title: "Successor Required",
+        description: "Please select a successor before uploading your handover document.",
         variant: "destructive",
       });
       return;
@@ -110,13 +125,44 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
         throw dbError;
       }
 
-      // Find active handover for this user (as exiting employee)
-      const { data: handoverData } = await supabase
+      // Find or create handover for this user (as exiting employee)
+      let handoverId: string | null = null;
+      const { data: existingHandover } = await supabase
         .from('handovers')
         .select('id')
         .eq('employee_id', user.id)
         .limit(1)
         .maybeSingle();
+
+      if (existingHandover) {
+        // Update existing handover with successor
+        handoverId = existingHandover.id;
+        const { error: updateError } = await supabase
+          .from('handovers')
+          .update({ successor_id: selectedSuccessor })
+          .eq('id', handoverId);
+        
+        if (updateError) {
+          console.error('Error updating handover:', updateError);
+        }
+      } else {
+        // Create new handover with successor
+        const { data: newHandover, error: createError } = await supabase
+          .from('handovers')
+          .insert({
+            employee_id: user.id,
+            successor_id: selectedSuccessor,
+            progress: 0
+          })
+          .select('id')
+          .single();
+        
+        if (createError) {
+          console.error('Error creating handover:', createError);
+        } else {
+          handoverId = newHandover?.id;
+        }
+      }
 
       // Send document content via webhook with user and handover context
       const { error: webhookError } = await supabase.functions.invoke('send-document-webhook', {
@@ -124,7 +170,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
           filePath, 
           filename: file.name,
           userId: user.id,
-          handoverId: handoverData?.id
+          handoverId: handoverId
         }
       });
 
@@ -178,6 +224,42 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
           <CardContent className="space-y-6">
             {!isUploading ? (
               <>
+                {/* Successor Selection */}
+                <div className="space-y-3">
+                  <Label htmlFor="successor-select" className="text-sm font-medium flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Select Successor *
+                  </Label>
+                  <Select 
+                    value={selectedSuccessor} 
+                    onValueChange={setSelectedSuccessor}
+                    disabled={usersLoading}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={usersLoading ? "Loading users..." : "Choose a successor for your handover"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{user.email}</span>
+                            <span className="text-xs text-muted-foreground capitalize">{user.role.replace('-', ' ')}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {users.length === 0 && !usersLoading && (
+                        <SelectItem value="" disabled>
+                          No available users
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {!selectedSuccessor && (
+                    <p className="text-xs text-muted-foreground">
+                      A successor must be selected to receive and continue your responsibilities
+                    </p>
+                  )}
+                </div>
                 {/* Drag and Drop Area */}
                 <div
                   className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
@@ -212,7 +294,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    Once uploaded, your document will be processed and sent for analysis. 
+                    Please select a successor and upload your handover document. Once uploaded, your document will be processed and sent for analysis. 
                     You'll then be able to access your knowledge handover dashboard.
                   </AlertDescription>
                 </Alert>
