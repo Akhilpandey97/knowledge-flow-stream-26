@@ -26,14 +26,36 @@ export const useAIInsights = (handoverId?: string) => {
       }
 
       try {
-        let query = supabase
-          .from('ai_knowledge_insights_complex')
-          .select('*')
-          .eq('user_id', user.id);
-
-        // Add handoverId filter if provided
+        // For successors, we need to find insights from handovers where they are the successor
+        // For other users, we can fetch by user_id or handover_id
+        let query;
+        
         if (handoverId) {
-          query = query.eq('handover_id', handoverId);
+          // If we have a specific handover ID, fetch insights for that handover
+          query = supabase
+            .from('ai_knowledge_insights_complex')
+            .select('*')
+            .eq('handover_id', handoverId);
+        } else {
+          // Fetch insights for current user OR handovers where user is successor
+          const handoversQuery = await supabase
+            .from('handovers')
+            .select('id')
+            .eq('successor_id', user.id);
+          
+          if (handoversQuery.data && handoversQuery.data.length > 0) {
+            const handoverIds = handoversQuery.data.map(h => h.id);
+            query = supabase
+              .from('ai_knowledge_insights_complex')
+              .select('*')
+              .or(`user_id.eq.${user.id},handover_id.in.(${handoverIds.join(',')})`);
+          } else {
+            // Fallback to just user_id
+            query = supabase
+              .from('ai_knowledge_insights_complex')
+              .select('*')
+              .eq('user_id', user.id);
+          }
         }
 
         const { data, error } = await query.order('created_at', { ascending: false });
@@ -55,12 +77,12 @@ export const useAIInsights = (handoverId?: string) => {
               insights.forEach((insight: any, index: number) => {
                 transformedInsights.push({
                   id: `${record.id}-${index}`,
-                  title: insight.title || insight.summary || 'AI Insight',
-                  description: insight.description || insight.content || insight.message || JSON.stringify(insight),
-                  type: insight.priority === 'high' ? 'critical' : 
-                        insight.priority === 'medium' ? 'warning' : 
-                        insight.type === 'success' ? 'success' : 'info',
-                  icon: insight.icon || getIconForType(insight.type || insight.priority),
+                  title: String(insight.title || insight.summary || 'AI Insight'),
+                  description: String(insight.description || insight.content || insight.message || JSON.stringify(insight)),
+                  type: String(insight.priority) === 'high' ? 'critical' : 
+                        String(insight.priority) === 'medium' ? 'warning' : 
+                        String(insight.type) === 'success' ? 'success' : 'info',
+                  icon: String(insight.icon || getIconForType(String(insight.type || insight.priority))),
                   created_at: record.created_at
                 });
               });
@@ -71,12 +93,12 @@ export const useAIInsights = (handoverId?: string) => {
                 insights.recommendations.forEach((rec: any, index: number) => {
                   transformedInsights.push({
                     id: `${record.id}-rec-${index}`,
-                    title: rec.title || rec.category || 'Recommendation',
-                    description: rec.description || rec.content || rec.text || JSON.stringify(rec),
-                    type: rec.priority === 'critical' ? 'critical' : 
-                          rec.priority === 'high' ? 'warning' : 
-                          rec.type === 'success' ? 'success' : 'info',
-                    icon: rec.icon || getIconForType(rec.priority || rec.type),
+                    title: String(rec.title || rec.category || 'Recommendation'),
+                    description: String(rec.description || rec.content || rec.text || JSON.stringify(rec)),
+                    type: String(rec.priority) === 'critical' ? 'critical' : 
+                          String(rec.priority) === 'high' ? 'warning' : 
+                          String(rec.type) === 'success' ? 'success' : 'info',
+                    icon: String(rec.icon || getIconForType(String(rec.priority || rec.type))),
                     created_at: record.created_at
                   });
                 });
@@ -84,12 +106,12 @@ export const useAIInsights = (handoverId?: string) => {
                 // Handle single insight object
                 transformedInsights.push({
                   id: record.id,
-                  title: insights.title || insights.summary || 'AI Knowledge Insight',
-                  description: insights.description || insights.content || insights.message || JSON.stringify(insights),
-                  type: insights.priority === 'high' ? 'critical' : 
-                        insights.priority === 'medium' ? 'warning' : 
-                        insights.type === 'success' ? 'success' : 'info',
-                  icon: insights.icon || getIconForType(insights.type || insights.priority),
+                  title: String(insights.title || insights.summary || 'AI Knowledge Insight'),
+                  description: String(insights.description || insights.content || insights.message || JSON.stringify(insights)),
+                  type: String(insights.priority) === 'high' ? 'critical' : 
+                        String(insights.priority) === 'medium' ? 'warning' : 
+                        String(insights.type) === 'success' ? 'success' : 'info',
+                  icon: String(insights.icon || getIconForType(String(insights.type || insights.priority))),
                   created_at: record.created_at
                 });
               }
