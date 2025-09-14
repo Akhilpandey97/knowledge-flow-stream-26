@@ -248,7 +248,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
                         </SelectItem>
                       ))}
                       {users.length === 0 && !usersLoading && (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="no-users" disabled>
                           No available users
                         </SelectItem>
                       )}
