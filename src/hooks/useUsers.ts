@@ -20,18 +20,8 @@ export const useUsers = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch all users except those with 'exiting' role and the current user
-      let query = supabase
-        .from('users')
-        .select('id, email, role')
-        .neq('role', 'exiting');
-      
-      // Also exclude the current user if available
-      if (currentUser?.id) {
-        query = query.neq('id', currentUser.id);
-      }
-      
-      const { data, error } = await query;
+      // Use RPC function to securely fetch eligible successors 
+      const { data, error } = await supabase.rpc('list_successor_candidates');
       
       if (error) {
         throw error;

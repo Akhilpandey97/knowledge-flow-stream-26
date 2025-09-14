@@ -284,6 +284,14 @@ export type Database = {
         Args: { uid: string }
         Returns: boolean
       }
+      list_successor_candidates: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+          id: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -242,7 +242,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
                   </Label>
                   
                   {/* Error state with retry option */}
-                  {error && !loading && (
+                  {error && !usersLoading && (
                     <Alert className="border-destructive/20 bg-destructive-soft">
                       <AlertTriangle className="h-4 w-4 text-destructive" />
                       <AlertDescription className="text-destructive">
