@@ -110,9 +110,22 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
         throw dbError;
       }
 
-      // Send document content via webhook
+      // Find active handover for this user (as exiting employee)
+      const { data: handoverData } = await supabase
+        .from('handovers')
+        .select('id')
+        .eq('employee_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      // Send document content via webhook with user and handover context
       const { error: webhookError } = await supabase.functions.invoke('send-document-webhook', {
-        body: { filePath, filename: file.name }
+        body: { 
+          filePath, 
+          filename: file.name,
+          userId: user.id,
+          handoverId: handoverData?.id
+        }
       });
 
       if (webhookError) {

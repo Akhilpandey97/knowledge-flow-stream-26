@@ -10,10 +10,15 @@ const corsHeaders = {
 };
 
 interface WebhookPayload {
-  handover_id: string;
+  handover_id?: string;
   insights: unknown;
   user_id?: string;
   file_path?: string;
+  metadata?: {
+    userId?: string;
+    handoverId?: string;
+    timestamp?: string;
+  };
 }
 
 serve(async (req: Request) => {
@@ -33,9 +38,9 @@ serve(async (req: Request) => {
     const payload: WebhookPayload = await req.json();
 
     // Validate required fields
-    if (!payload.handover_id || !payload.insights) {
+    if (!payload.insights) {
       return new Response(JSON.stringify({ 
-        error: "Missing required fields: handover_id and insights are required" 
+        error: "Missing required field: insights" 
       }), { 
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -44,16 +49,61 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Determine handover_id and user_id with fallbacks
+    let handoverId = payload.handover_id;
+    let userId = payload.user_id;
+
+    // If missing, try to derive from metadata
+    if (payload.metadata) {
+      handoverId = handoverId || payload.metadata.handoverId;
+      userId = userId || payload.metadata.userId;
+    }
+
+    // If still no handover_id, try to derive from user_id or file_path
+    if (!handoverId && userId) {
+      const { data: handoverData } = await supabase
+        .from('handovers')
+        .select('id')
+        .eq('employee_id', userId)
+        .limit(1)
+        .maybeSingle();
+      
+      if (handoverData) {
+        handoverId = handoverData.id;
+      }
+    }
+
+    // If still no handover_id and we have file_path, try to extract user_id from path
+    if (!handoverId && payload.file_path) {
+      const pathUserId = payload.file_path.split('/')[0];
+      if (pathUserId && pathUserId.length === 36) { // UUID length check
+        const { data: handoverData } = await supabase
+          .from('handovers')
+          .select('id')
+          .eq('employee_id', pathUserId)
+          .limit(1)
+          .maybeSingle();
+        
+        if (handoverData) {
+          handoverId = handoverData.id;
+          userId = userId || pathUserId;
+        }
+      }
+    }
+
     // Prepare the insert data
     const insertData: Record<string, unknown> = {
-      handover_id: payload.handover_id,
-      insights: payload.insights,
+      insights: typeof payload.insights === 'string' ? payload.insights : JSON.stringify(payload.insights),
       created_at: new Date().toISOString(),
     };
 
     // Add optional fields if present
-    if (payload.user_id) {
-      insertData.user_id = payload.user_id;
+    if (handoverId) {
+      insertData.handover_id = handoverId;
+    }
+    
+    if (userId) {
+      insertData.user_id = userId;
     }
     
     if (payload.file_path) {

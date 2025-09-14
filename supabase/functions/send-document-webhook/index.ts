@@ -27,7 +27,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const { filePath, filename } = await req.json();
+    const { filePath, filename, userId, handoverId } = await req.json();
 
     if (!filePath || !filename) {
       return new Response(JSON.stringify({ error: "Missing filePath or filename" }), { 
@@ -57,12 +57,17 @@ serve(async (req: Request) => {
     const arrayBuffer = await fileData.arrayBuffer();
     const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
-    // Prepare webhook payload
+    // Prepare webhook payload with user and handover context
     const webhookPayload = {
       filePath,
       filename,
       content: base64Data,
-      contentType: fileData.type || 'application/octet-stream'
+      contentType: fileData.type || 'application/octet-stream',
+      metadata: {
+        userId,
+        handoverId,
+        timestamp: new Date().toISOString()
+      }
     };
 
     // Send to Lindy.ai webhook
