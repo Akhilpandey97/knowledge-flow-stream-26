@@ -107,9 +107,9 @@ serve(async (req) => {
       throw new Error(`No user_id found for file_path: ${filePath}`);
     }
 
-    // Store insights in ai_knowledge_insights table
+    // Store insights in ai_knowledge_insights_complex table
     const { error: insightsError } = await supabase
-      .from('ai_knowledge_insights')
+      .from('ai_knowledge_insights_complex')
       .insert({
         user_id: uploadData.user_id,
         file_path: filePath,

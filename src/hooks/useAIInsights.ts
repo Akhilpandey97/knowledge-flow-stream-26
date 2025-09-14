@@ -27,7 +27,7 @@ export const useAIInsights = () => {
 
       try {
         const { data, error } = await supabase
-          .from('ai_knowledge_insights')
+          .from('ai_knowledge_insights_complex')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
