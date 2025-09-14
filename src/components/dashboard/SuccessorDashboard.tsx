@@ -18,7 +18,7 @@ import {
 import { ChatModal } from './ChatModal';
 import { EscalationModal } from './EscalationModal';
 import { ExportButton } from '@/components/ui/export-button';
-import { useAIInsights } from '@/hooks/useAIInsights';
+import { SuccessorAIInsights } from './SuccessorAIInsights';
 
 const mockHandoverData = {
   exitingEmployeeName: 'John Doe',
@@ -69,7 +69,6 @@ const mockHandoverData = {
 export const SuccessorDashboard: React.FC = () => {
   const [chatModal, setChatModal] = useState(false);
   const [escalationModal, setEscalationModal] = useState(false);
-  const { insights, loading: insightsLoading, error: insightsError } = useAIInsights();
   const daysUntilTarget = Math.ceil((new Date('2024-01-15').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
@@ -126,69 +125,7 @@ export const SuccessorDashboard: React.FC = () => {
       </Card>
 
       {/* AI Knowledge Transfer Insights */}
-      <Card className="shadow-medium">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="p-1 bg-primary-soft rounded">
-              <div className="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
-                <span className="text-xs text-white font-bold">✨</span>
-              </div>
-            </div>
-            AI Knowledge Transfer Insights
-          </CardTitle>
-          <CardDescription>
-            Personalized <span className="text-primary font-medium">recommendations</span> to accelerate your onboarding
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {insightsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                <span className="text-muted-foreground">Loading AI insights...</span>
-              </div>
-            ) : insightsError ? (
-              <div className="text-center py-8">
-                <AlertTriangle className="h-8 w-8 text-warning mx-auto mb-2" />
-                <p className="text-muted-foreground">Failed to load AI insights</p>
-                <p className="text-sm text-muted-foreground">{insightsError}</p>
-              </div>
-            ) : insights.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🤖</span>
-                </div>
-                <h4 className="font-medium text-foreground mb-2">No AI insights yet</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Upload documents to get personalized knowledge transfer insights from AI analysis.
-                </p>
-                <Button variant="outline" size="sm">
-                  Upload Documents
-                </Button>
-              </div>
-            ) : (
-              insights.map((insight) => (
-                <div key={insight.id} className="flex items-start gap-4 p-4 border rounded-lg bg-card">
-                  <div className={`p-2 rounded-lg ${getInsightBgClass(insight.type)}`}>
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${getInsightIconBgClass(insight.type)}`}>
-                      <span className="text-xs text-white">{insight.icon}</span>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-medium text-foreground">{insight.title}</h4>
-                        <p className="text-sm text-muted-foreground">{insight.description}</p>
-                      </div>
-                      <Badge variant="secondary" className="ml-2 text-xs">AI</Badge>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <SuccessorAIInsights />
 
       {/* Critical Missing Items Alert */}
       {mockHandoverData.criticalGaps.length > 0 && (
@@ -332,31 +269,4 @@ export const SuccessorDashboard: React.FC = () => {
       />
     </div>
   );
-};
-
-// Helper functions for insight styling
-const getInsightBgClass = (type: string): string => {
-  switch (type) {
-    case 'critical':
-      return 'bg-critical-soft';
-    case 'warning':
-      return 'bg-warning-soft';
-    case 'success':
-      return 'bg-success-soft';
-    default:
-      return 'bg-muted';
-  }
-};
-
-const getInsightIconBgClass = (type: string): string => {
-  switch (type) {
-    case 'critical':
-      return 'bg-critical';
-    case 'warning':
-      return 'bg-warning';
-    case 'success':
-      return 'bg-success';
-    default:
-      return 'bg-primary';
-  }
 };

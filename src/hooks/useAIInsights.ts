@@ -11,7 +11,7 @@ export interface AIInsight {
   created_at: string;
 }
 
-export const useAIInsights = () => {
+export const useAIInsights = (handoverId?: string) => {
   const { user } = useAuth();
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,11 +26,17 @@ export const useAIInsights = () => {
       }
 
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('ai_knowledge_insights_complex')
           .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+          .eq('user_id', user.id);
+
+        // Add handoverId filter if provided
+        if (handoverId) {
+          query = query.eq('handover_id', handoverId);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) {
           throw error;
@@ -111,7 +117,7 @@ export const useAIInsights = () => {
     };
 
     fetchAIInsights();
-  }, [user]);
+  }, [user, handoverId]);
 
   return {
     insights,
