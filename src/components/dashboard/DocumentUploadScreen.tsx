@@ -18,7 +18,7 @@ interface DocumentUploadScreenProps {
 export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUploadComplete }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { users, loading: usersLoading } = useUsers();
+  const { users, loading: usersLoading, error, retry } = useUsers();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -63,9 +63,19 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
 
     // Validate successor selection
     if (!selectedSuccessor) {
+      let errorMessage = "Please select a successor before uploading your handover document.";
+      
+      if (error) {
+        errorMessage = "Unable to load available successors. Please retry loading users first.";
+      } else if (usersLoading) {
+        errorMessage = "Still loading available successors. Please wait a moment and try again.";
+      } else if (users.length === 0) {
+        errorMessage = "No available successors found. Please contact your HR manager.";
+      }
+      
       toast({
         title: "Successor Required",
-        description: "Please select a successor before uploading your handover document.",
+        description: errorMessage,
         variant: "destructive",
       });
       return;
@@ -230,16 +240,47 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
                     <Users className="h-4 w-4" />
                     Select Successor *
                   </Label>
+                  
+                  {/* Error state with retry option */}
+                  {error && !loading && (
+                    <Alert className="border-destructive/20 bg-destructive-soft">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <AlertDescription className="text-destructive">
+                        <div className="flex items-center justify-between">
+                          <span>Failed to load users: {error}</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={retry}
+                            className="ml-2"
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
                   <Select 
                     value={selectedSuccessor} 
                     onValueChange={setSelectedSuccessor}
-                    disabled={usersLoading}
+                    disabled={usersLoading || !!error}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder={usersLoading ? "Loading users..." : "Choose a successor for your handover"} />
+                      <SelectValue 
+                        placeholder={
+                          usersLoading 
+                            ? "Loading users..." 
+                            : error 
+                            ? "Please retry to load users"
+                            : users.length === 0
+                            ? "No available users found"
+                            : "Choose a successor for your handover"
+                        } 
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.map((user) => (
+                      {!usersLoading && !error && users.length > 0 && users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           <div className="flex flex-col">
                             <span className="font-medium">{user.email}</span>
@@ -247,17 +288,36 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({ onUp
                           </div>
                         </SelectItem>
                       ))}
-                      {users.length === 0 && !usersLoading && (
+                      {!usersLoading && !error && users.length === 0 && (
                         <SelectItem value="no-users" disabled>
-                          No available users
+                          No available users found
+                        </SelectItem>
+                      )}
+                      {usersLoading && (
+                        <SelectItem value="loading" disabled>
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Loading users...
+                          </div>
                         </SelectItem>
                       )}
                     </SelectContent>
                   </Select>
-                  {!selectedSuccessor && (
+                  
+                  {!selectedSuccessor && !error && (
                     <p className="text-xs text-muted-foreground">
                       A successor must be selected to receive and continue your responsibilities
                     </p>
+                  )}
+                  
+                  {/* Additional info when no users are available */}
+                  {!usersLoading && !error && users.length === 0 && (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        No available successors found. Please contact your HR manager to ensure there are eligible users in the system.
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
                 {/* Drag and Drop Area */}
