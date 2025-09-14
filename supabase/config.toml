@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-document-webhook]
 verify_jwt = true
+
+[functions.receive-ai-insights-webhook]
+verify_jwt = false

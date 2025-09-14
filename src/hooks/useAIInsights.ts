@@ -16,6 +16,23 @@ export const useAIInsights = (handoverId?: string) => {
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Realtime subscription to refresh on new insights
+  useEffect(() => {
+    const channel = supabase
+      .channel('ai_insights_inserts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_knowledge_insights_complex' },
+        () => setRefreshKey((k) => k + 1)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchAIInsights = async () => {
@@ -160,16 +177,15 @@ export const useAIInsights = (handoverId?: string) => {
     };
 
     fetchAIInsights();
-  }, [user, handoverId]);
+  }, [user, handoverId, refreshKey]);
 
   return {
     insights,
     loading,
     error,
     refetch: () => {
-      setLoading(true);
       setError(null);
-      // Re-trigger the effect by updating a dependency
+      setRefreshKey((k) => k + 1);
     }
   };
 };

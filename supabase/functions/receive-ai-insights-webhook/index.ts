@@ -75,17 +75,29 @@ serve(async (req: Request) => {
       }
     }
 
-    // If still no handover_id, try to derive from user_id
+    // If still no handover_id, try to derive from user_id (employee or successor)
     if (!handoverId && userId) {
-      const { data: handoverData } = await supabase
+      // First try employee
+      let { data: handoverData } = await supabase
         .from('handovers')
         .select('id')
         .eq('employee_id', userId)
         .limit(1)
         .maybeSingle();
-      
+
       if (handoverData) {
         handoverId = handoverData.id;
+      } else {
+        // Then try successor
+        const res2 = await supabase
+          .from('handovers')
+          .select('id')
+          .eq('successor_id', userId)
+          .limit(1)
+          .maybeSingle();
+        if (res2.data) {
+          handoverId = res2.data.id;
+        }
       }
     }
 
@@ -93,23 +105,46 @@ serve(async (req: Request) => {
     if (!handoverId && payload.file_path) {
       const pathUserId = payload.file_path.split('/')[0];
       if (pathUserId && pathUserId.length === 36) { // UUID length check
-        const { data: handoverData } = await supabase
+        // Try employee match first, then successor
+        let { data: h1 } = await supabase
           .from('handovers')
           .select('id')
           .eq('employee_id', pathUserId)
           .limit(1)
           .maybeSingle();
-        
-        if (handoverData) {
-          handoverId = handoverData.id;
+        if (h1) {
+          handoverId = h1.id;
           userId = userId || pathUserId;
+        } else {
+          const res3 = await supabase
+            .from('handovers')
+            .select('id')
+            .eq('successor_id', pathUserId)
+            .limit(1)
+            .maybeSingle();
+          if (res3.data) {
+            handoverId = res3.data.id;
+            userId = userId || pathUserId;
+          }
         }
       }
     }
 
     // Prepare the insert data
+    const computeInsightText = () => {
+      try {
+        if (typeof payload.insights === 'string') return payload.insights;
+        if (Array.isArray(payload.insights)) return JSON.stringify(payload.insights[0] ?? payload.insights);
+        if (typeof payload.insights === 'object' && payload.insights !== null) return JSON.stringify(payload.insights);
+        return String(payload.insights);
+      } catch (_) {
+        return 'AI insight received';
+      }
+    };
+
     const insertData: Record<string, unknown> = {
       insights: typeof payload.insights === 'string' ? payload.insights : JSON.stringify(payload.insights),
+      insight: computeInsightText(),
       created_at: new Date().toISOString(),
     };
 
