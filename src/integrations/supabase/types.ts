@@ -55,6 +55,24 @@ export type Database = {
       }
       ai_knowledge_insights: {
         Row: {
+          created_at: string | null
+          id: number
+          insight: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          insight: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          insight?: string
+        }
+        Relationships: []
+      }
+      ai_knowledge_insights_complex: {
+        Row: {
           created_at: string
           file_path: string
           id: string
@@ -80,14 +98,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "ai_knowledge_insights_file_path_fkey"
+            foreignKeyName: "ai_knowledge_insights_complex_file_path_fkey"
             columns: ["file_path"]
             isOneToOne: false
             referencedRelation: "user_document_uploads"
             referencedColumns: ["file_path"]
           },
           {
-            foreignKeyName: "ai_knowledge_insights_user_id_fkey"
+            foreignKeyName: "ai_knowledge_insights_complex_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
