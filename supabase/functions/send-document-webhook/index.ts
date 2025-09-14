@@ -4,57 +4,102 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.3";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Lindy.ai webhook configuration
+const LINDY_WEBHOOK_URL = "https://public.lindy.ai/api/v1/webhooks/lindy/6abf084d-f586-4755-b450-0b6bf6563462";
+const LINDY_WEBHOOK_SECRET = "65a570b73d130c74eda80a418fdf6a1769ce68c085e25f9580bdf65f752b0f85";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req: Request) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
     if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+      return new Response(JSON.stringify({ error: "Method not allowed" }), { 
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    const { file_path, insights } = await req.json();
+    const { filePath, filename } = await req.json();
 
-    if (!file_path || !insights) {
-      return new Response(JSON.stringify({ error: "Missing file_path or insights" }), { status: 400 });
+    if (!filePath || !filename) {
+      return new Response(JSON.stringify({ error: "Missing filePath or filename" }), { 
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find user_id for this file_path
-    const { data: uploadData, error: uploadError } = await supabase
-      .from("user_document_uploads")
-      .select("user_id")
-      .eq("file_path", file_path)
-      .single();
+    // Fetch the document from Supabase storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('handover-documents')
+      .download(filePath);
 
-    if (uploadError || !uploadData?.user_id) {
+    if (downloadError || !fileData) {
       return new Response(
-        JSON.stringify({ error: `Could not find user for file_path: ${file_path}` }),
-        { status: 400 }
+        JSON.stringify({ error: `Failed to download file: ${downloadError?.message || 'File not found'}` }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
       );
     }
 
-    // Insert the insights into ai_knowledge_insights_complex
-    const { error: insertError } = await supabase
-      .from("ai_knowledge_insights_complex")
-      .insert({
-        user_id: uploadData.user_id,
-        file_path,
-        insights,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+    // Convert file to base64
+    const arrayBuffer = await fileData.arrayBuffer();
+    const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
-    if (insertError) {
+    // Prepare webhook payload
+    const webhookPayload = {
+      filePath,
+      filename,
+      content: base64Data,
+      contentType: fileData.type || 'application/octet-stream'
+    };
+
+    // Send to Lindy.ai webhook
+    const webhookResponse = await fetch(LINDY_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LINDY_WEBHOOK_SECRET}`,
+      },
+      body: JSON.stringify(webhookPayload),
+    });
+
+    if (!webhookResponse.ok) {
+      const errorText = await webhookResponse.text();
       return new Response(
-        JSON.stringify({ error: `Failed to insert insights: ${insertError.message}` }),
-        { status: 500 }
+        JSON.stringify({ 
+          error: `Webhook request failed: ${webhookResponse.status} ${webhookResponse.statusText}`,
+          details: errorText
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
       );
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return new Response(JSON.stringify({ success: true }), { 
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err.message || "Unknown error" }),
-      { status: 500 }
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
   }
 });
