@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_knowledge_insights_complex: {
+        Row: {
+          created_at: string | null
+          file_path: string | null
+          handover_id: string | null
+          id: number
+          insight: string
+          insights: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_path?: string | null
+          handover_id?: string | null
+          id?: number
+          insight: string
+          insights?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_path?: string | null
+          handover_id?: string | null
+          id?: number
+          insight?: string
+          insights?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       handovers: {
         Row: {
           created_at: string | null
@@ -53,75 +83,29 @@ export type Database = {
           },
         ]
       }
-      ai_knowledge_insights: {
+      lindi_responses: {
         Row: {
           created_at: string | null
-          id: number
-          insight: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: number
-          insight: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: number
-          insight?: string
-        }
-        Relationships: []
-      }
-      ai_knowledge_insights_complex: {
-        Row: {
-          created_at: string
-          file_path: string | null
-          handover_id: string | null
           id: string
-          insights: Json
-          updated_at: string
+          query: string | null
+          response: string | null
           user_id: string | null
         }
         Insert: {
-          created_at?: string
-          file_path?: string | null
-          handover_id?: string | null
+          created_at?: string | null
           id?: string
-          insights: Json
-          updated_at?: string
+          query?: string | null
+          response?: string | null
           user_id?: string | null
         }
         Update: {
-          created_at?: string
-          file_path?: string | null
-          handover_id?: string | null
+          created_at?: string | null
           id?: string
-          insights?: Json
-          updated_at?: string
+          query?: string | null
+          response?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "ai_knowledge_insights_complex_file_path_fkey"
-            columns: ["file_path"]
-            isOneToOne: false
-            referencedRelation: "user_document_uploads"
-            referencedColumns: ["file_path"]
-          },
-          {
-            foreignKeyName: "ai_knowledge_insights_complex_handover_id_fkey"
-            columns: ["handover_id"]
-            isOneToOne: false
-            referencedRelation: "handovers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_knowledge_insights_complex_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       messages: {
         Row: {
@@ -295,6 +279,10 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      is_admin: {
+        Args: { uid: string }
+        Returns: boolean
       }
     }
     Enums: {
