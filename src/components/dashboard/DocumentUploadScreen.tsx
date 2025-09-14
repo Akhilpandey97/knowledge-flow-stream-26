@@ -33,29 +33,8 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileUpload(files[0]);
-    }
-  }, []);
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      handleFileUpload(files[0]);
-    }
-  }, []);
-  const handleFileUpload = async (file: File) => {
+  
+  const handleFileUpload = useCallback(async (file: File) => {
     if (!user) {
       toast({
         title: "Error",
@@ -190,18 +169,45 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       setTimeout(() => {
         onUploadComplete();
       }, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload document. Please try again.";
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload document. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
       setIsUploading(false);
       setUploadProgress(0);
       setUploadedFile(null);
     }
-  };
+  }, [user, selectedSuccessor, error, usersLoading, users.length, toast, onUploadComplete]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+  
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+  
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  }, [handleFileUpload]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  }, [handleFileUpload]);
   return <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted/20">
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}

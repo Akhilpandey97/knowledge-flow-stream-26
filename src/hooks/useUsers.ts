@@ -46,7 +46,7 @@ export const useUsers = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.id, retryCount]);
+  }, [retryCount]); // Remove currentUser?.id dependency as it's not used in the function
 
   useEffect(() => {
     fetchUsers();
