@@ -40,11 +40,12 @@ export const HandoverAuthSyncManager: React.FC = () => {
         variant: result.success ? "default" : "destructive",
       });
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Unexpected sync error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred during sync';
       toast({
         title: "Sync Failed",
-        description: "An unexpected error occurred during sync",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
