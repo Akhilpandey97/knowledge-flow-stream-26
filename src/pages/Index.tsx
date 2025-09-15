@@ -6,6 +6,7 @@ import { StepBasedExitingEmployeeDashboard } from '@/components/dashboard/StepBa
 import { SuccessorDashboard } from '@/components/dashboard/SuccessorDashboard';
 import { HRManagerDashboard } from '@/components/dashboard/HRManagerDashboard';
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
+import { DemoDocumentUpload } from '@/components/demo/DemoDocumentUpload';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
@@ -18,6 +19,13 @@ const Index = () => {
         <span className="ml-2">Loading...</span>
       </div>
     );
+  }
+
+  // Check if we're in a sandboxed environment where Supabase connection fails
+  // Show demo instead to demonstrate the fixes
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('demo') === 'true' || (!isAuthenticated && window.location.host.includes('localhost'))) {
+    return <DemoDocumentUpload />;
   }
 
   if (!isAuthenticated || !user) {
