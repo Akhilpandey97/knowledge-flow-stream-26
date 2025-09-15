@@ -84,17 +84,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     
     try {
-      const { data: profile, error } = await supabase
+      // First try to find by auth ID
+      let { data: profile, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', supabaseUser.id)
         .maybeSingle();
 
-      console.log('AuthContext: Database query result:', {
+      console.log('AuthContext: Database query result by ID:', {
         profile,
         error,
         hasProfile: !!profile
       });
+
+      // If no profile found by auth ID, try to find by email (handles ID mismatches)
+      if (!profile && !error && supabaseUser.email) {
+        console.log('AuthContext: No profile found by ID, trying email lookup for:', supabaseUser.email);
+        const { data: emailProfile, error: emailError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', supabaseUser.email)
+          .maybeSingle();
+          
+        console.log('AuthContext: Email lookup result:', { emailProfile, emailError });
+          
+        if (emailProfile && !emailError) {
+          console.log('AuthContext: Found profile by email, auto-creating correct profile with auth ID');
+          // Create/update profile with correct auth ID
+          const { data: upsertedProfile, error: upsertError } = await supabase
+            .from('users')
+            .upsert({
+              id: supabaseUser.id,
+              email: supabaseUser.email,
+              role: emailProfile.role,
+              created_at: emailProfile.created_at
+            }, {
+              onConflict: 'id'
+            })
+            .select()
+            .single();
+            
+          if (!upsertError && upsertedProfile) {
+            profile = upsertedProfile;
+            console.log('AuthContext: Successfully created/updated profile with correct auth ID');
+          } else {
+            console.error('AuthContext: Error upserting profile:', upsertError);
+          }
+        }
+      }
 
       if (error) {
         console.error('AuthContext: Error fetching user profile:', {
@@ -141,17 +178,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         console.log('AuthContext: No profile found in database for user ID:', supabaseUser.id);
         
-        // Create a fallback user if no profile found
-        const fallbackUser: User = {
-          id: supabaseUser.id,
-          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Unknown',
-          email: supabaseUser.email || '',
-          role: 'exiting', // Default role
-          department: 'General',
-          avatar: supabaseUser.user_metadata?.avatar_url || ''
-        };
-        console.log('AuthContext: Using fallback user (no profile):', fallbackUser);
-        setUser(fallbackUser);
+        // Auto-create profile for new users
+        console.log('AuthContext: Auto-creating profile for new user');
+        const { data: newProfile, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            role: 'exiting'
+          })
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error('AuthContext: Error creating profile:', createError);
+          // Create a fallback user if auto-creation fails
+          const fallbackUser: User = {
+            id: supabaseUser.id,
+            name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Unknown',
+            email: supabaseUser.email || '',
+            role: 'exiting', // Default role
+            department: 'General',
+            avatar: supabaseUser.user_metadata?.avatar_url || ''
+          };
+          console.log('AuthContext: Using fallback user (creation failed):', fallbackUser);
+          setUser(fallbackUser);
+        } else {
+          console.log('AuthContext: Successfully created new profile:', newProfile);
+          const mappedRole = mapDatabaseRole(newProfile.role);
+          const mappedUser: User = {
+            id: newProfile.id,
+            name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Unknown',
+            email: newProfile.email,
+            role: mappedRole,
+            department: getDepartmentForRole(newProfile.role),
+            avatar: supabaseUser.user_metadata?.avatar_url || ''
+          };
+          setUser(mappedUser);
+        }
       }
     } catch (error) {
       console.error('AuthContext: Unexpected error in fetchUserProfile:', error);

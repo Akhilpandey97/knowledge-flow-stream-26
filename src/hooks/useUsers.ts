@@ -16,11 +16,19 @@ export const useUsers = () => {
   const [retryCount, setRetryCount] = useState(0);
 
   const fetchUsers = useCallback(async () => {
+    // Don't fetch if user is not authenticated
+    if (!currentUser) {
+      console.log('No authenticated user, skipping successor candidates fetch');
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
       
-      console.log('Fetching successor candidates...');
+      console.log('Fetching successor candidates for user:', currentUser.id);
       
       // Use RPC function to securely fetch eligible successors 
       const { data, error } = await supabase.rpc('list_successor_candidates');
@@ -36,7 +44,7 @@ export const useUsers = () => {
           .from('users')
           .select('id, email, role')
           .neq('role', 'exiting')
-          .neq('id', currentUser?.id || '');
+          .neq('id', currentUser.id);
           
         if (fallbackError) {
           console.error('Fallback query also failed:', fallbackError);
@@ -70,7 +78,7 @@ export const useUsers = () => {
     } finally {
       setLoading(false);
     }
-  }, [retryCount, currentUser?.id]);
+  }, [retryCount, currentUser]);
 
   useEffect(() => {
     fetchUsers();
