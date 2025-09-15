@@ -127,6 +127,23 @@ serve(async (req) => {
 
         console.log('Profile created successfully')
 
+        // Ensure handover consistency for this user
+        try {
+          const { error: handoverSyncError } = await supabase.rpc('ensure_handover_auth_consistency', {
+            user_email: email,
+            auth_user_id: authUser.user.id
+          })
+          
+          if (handoverSyncError) {
+            console.warn('Warning: Could not sync handover Auth IDs:', handoverSyncError)
+            // Don't fail user creation for this, just log the warning
+          } else {
+            console.log('Handover Auth ID consistency ensured for new user')
+          }
+        } catch (syncError) {
+          console.warn('Warning: Handover sync failed but user was created:', syncError)
+        }
+
         return new Response(
           JSON.stringify({ 
             success: true, 
