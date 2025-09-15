@@ -35,7 +35,14 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
   const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
   
   const handleFileUpload = useCallback(async (file: File) => {
+    console.log('Starting file upload process...', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
     if (!user) {
+      console.error('No user found for upload');
       toast({
         title: "Error",
         description: "You must be logged in to upload documents.",
@@ -43,6 +50,8 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       });
       return;
     }
+
+    console.log('Current user:', { id: user.id, email: user.email });
 
     // Validate successor selection
     if (!selectedSuccessor) {
@@ -54,6 +63,12 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       } else if (users.length === 0) {
         errorMessage = "No available successors found. Please contact your HR manager.";
       }
+      console.error('Successor validation failed:', {
+        selectedSuccessor,
+        error,
+        usersLoading,
+        usersCount: users.length
+      });
       toast({
         title: "Successor Required",
         description: errorMessage,
@@ -62,8 +77,11 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       return;
     }
 
+    console.log('Selected successor:', selectedSuccessor);
+
     // Validate file size (20MB limit)
     if (file.size > 20 * 1024 * 1024) {
+      console.error('File too large:', file.size);
       toast({
         title: "File too large",
         description: "Please select a file smaller than 20MB.",
@@ -77,12 +95,16 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
     try {
       // Create file path with user ID
       const filePath = `${user.id}/${Date.now()}-${file.name}`;
+      console.log('Upload file path:', filePath);
 
       // Upload file to Supabase Storage
+      console.log('Starting Supabase storage upload...');
       const {
         data,
         error: uploadError
       } = await supabase.storage.from('handover-documents').upload(filePath, file);
+
+      console.log('Supabase storage upload result:', { data, uploadError });
 
       // Simulate progress for better UX
       const progressInterval = setInterval(() => {
@@ -96,11 +118,13 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       }, 200);
       if (uploadError) {
         clearInterval(progressInterval);
+        console.error('Storage upload error:', uploadError);
         throw uploadError;
       }
       setUploadProgress(100);
 
       // Record upload in database
+      console.log('Recording upload in database...');
       const {
         error: dbError
       } = await supabase.from('user_document_uploads').insert({
@@ -109,17 +133,25 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
         file_path: filePath
       });
       if (dbError) {
+        console.error('Database insert error:', dbError);
         throw dbError;
       }
 
+      console.log('Database record created successfully');
+
       // Find or create handover for this user (as exiting employee)
       let handoverId: string | null = null;
+      console.log('Finding/creating handover record...');
       const {
         data: existingHandover
       } = await supabase.from('handovers').select('id').eq('employee_id', user.id).limit(1).maybeSingle();
+      
+      console.log('Existing handover:', existingHandover);
+      
       if (existingHandover) {
         // Update existing handover with successor
         handoverId = existingHandover.id;
+        console.log('Updating existing handover with successor...');
         const {
           error: updateError
         } = await supabase.from('handovers').update({
@@ -127,9 +159,12 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
         }).eq('id', handoverId);
         if (updateError) {
           console.error('Error updating handover:', updateError);
+        } else {
+          console.log('Handover updated successfully');
         }
       } else {
         // Create new handover with successor
+        console.log('Creating new handover...');
         const {
           data: newHandover,
           error: createError
@@ -142,10 +177,12 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
           console.error('Error creating handover:', createError);
         } else {
           handoverId = newHandover?.id;
+          console.log('New handover created:', handoverId);
         }
       }
 
       // Send document content via webhook with user and handover context
+      console.log('Invoking webhook...');
       const {
         error: webhookError
       } = await supabase.functions.invoke('send-document-webhook', {
@@ -159,7 +196,11 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       if (webhookError) {
         console.error('Webhook error:', webhookError);
         // Don't fail the upload if webhook fails, just log it
+      } else {
+        console.log('Webhook invoked successfully');
       }
+      
+      console.log('Upload process completed successfully');
       toast({
         title: "Document uploaded successfully",
         description: "Your document has been uploaded and processed."
@@ -257,14 +298,38 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
                         )}
                       </Button>
                     </div>
+                  ) : usersLoading ? (
+                    <div className="flex items-center justify-center p-4 bg-muted rounded-lg">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>Loading available successors...</span>
+                    </div>
+                  ) : users.length === 0 ? (
+                    <div className="space-y-2">
+                      <Alert className="border-warning/20 bg-warning/10">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription className="text-warning">
+                          No available successors found. This could be due to:
+                          <ul className="list-disc ml-4 mt-2">
+                            <li>All users are marked as 'exiting' employees</li>
+                            <li>Database permissions issue</li>
+                            <li>No users exist in the system</li>
+                          </ul>
+                          Please contact your HR manager for assistance.
+                        </AlertDescription>
+                      </Alert>
+                      <Button 
+                        variant="outline" 
+                        onClick={retry}
+                        disabled={usersLoading}
+                        className="w-full"
+                      >
+                        Retry Loading Users
+                      </Button>
+                    </div>
                   ) : (
                     <Select value={selectedSuccessor} onValueChange={setSelectedSuccessor}>
                       <SelectTrigger id="successor-select" className="h-12 bg-background">
-                        <SelectValue placeholder={
-                          usersLoading ? "Loading available successors..." : 
-                          users.length === 0 ? "No available successors" :
-                          "Choose a successor for your handover"
-                        } />
+                        <SelectValue placeholder="Choose a successor for your handover" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border-border shadow-lg z-50">
                         {users.map((successor) => (
