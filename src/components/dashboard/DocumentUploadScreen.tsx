@@ -249,36 +249,48 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       handleFileUpload(files[0]);
     }
   }, [handleFileUpload]);
-  return <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted/20">
-      <div className="w-full max-w-2xl space-y-6">
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-background to-muted/20">
+      <div className="w-full max-w-2xl space-y-8">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">Document Upload Required</h1>
-          <p className="text-muted-foreground text-lg">
-            Please upload your handover document to proceed to the dashboard.
+        <div className="text-center space-y-4">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 rounded-full bg-primary/10">
+              <FileText className="h-8 w-8 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+            Document Upload Required
+          </h1>
+          <p className="text-muted-foreground text-lg leading-relaxed">
+            Upload your handover document to begin the knowledge transfer process
           </p>
         </div>
 
         {/* Upload Card */}
-        <Card className="shadow-elegant">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Upload Your Document
+        <Card className="border-border/50 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.1)] bg-card/95 backdrop-blur-sm">
+          <CardHeader className="pb-6">
+            <CardTitle className="text-xl font-semibold text-foreground">
+              Knowledge Handover Document
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {!isUploading ? <>
+            {!isUploading ? (
+              <>
                 {/* Successor Selection */}
-                <div className="space-y-3">
-                  <Label htmlFor="successor-select" className="text-sm font-semibold text-foreground">
-                    Select Successor *
-                  </Label>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <Label htmlFor="successor-select" className="text-sm font-medium text-foreground">
+                      Select Successor
+                    </Label>
+                    <span className="text-sm text-critical">*</span>
+                  </div>
                   {error ? (
-                    <div className="space-y-2">
-                      <Alert className="border-destructive/20 bg-destructive/10">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription className="text-destructive">
+                    <div className="space-y-3">
+                      <Alert className="border-critical/20 bg-critical-soft">
+                        <AlertTriangle className="h-4 w-4 text-critical" />
+                        <AlertDescription className="text-critical">
                           Failed to load available successors: {error}
                         </AlertDescription>
                       </Alert>
@@ -286,7 +298,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
                         variant="outline" 
                         onClick={retry}
                         disabled={usersLoading}
-                        className="w-full"
+                        className="w-full h-10"
                       >
                         {usersLoading ? (
                           <>
@@ -299,17 +311,17 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
                       </Button>
                     </div>
                   ) : usersLoading ? (
-                    <div className="flex items-center justify-center p-4 bg-muted rounded-lg">
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      <span>Loading available successors...</span>
+                    <div className="flex items-center justify-center p-6 bg-muted/50 rounded-lg border border-border/50">
+                      <Loader2 className="h-5 w-5 mr-3 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Loading available successors...</span>
                     </div>
                   ) : users.length === 0 ? (
-                    <div className="space-y-2">
-                      <Alert className="border-warning/20 bg-warning/10">
-                        <AlertTriangle className="h-4 w-4" />
+                    <div className="space-y-3">
+                      <Alert className="border-warning/20 bg-warning-soft">
+                        <AlertTriangle className="h-4 w-4 text-warning" />
                         <AlertDescription className="text-warning">
                           No available successors found. This could be due to:
-                          <ul className="list-disc ml-4 mt-2">
+                          <ul className="list-disc ml-4 mt-2 space-y-1">
                             <li>All users are marked as 'exiting' employees</li>
                             <li>Database permissions issue</li>
                             <li>No users exist in the system</li>
@@ -321,27 +333,29 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
                         variant="outline" 
                         onClick={retry}
                         disabled={usersLoading}
-                        className="w-full"
+                        className="w-full h-10"
                       >
                         Retry Loading Users
                       </Button>
                     </div>
                   ) : (
                     <Select value={selectedSuccessor} onValueChange={setSelectedSuccessor}>
-                      <SelectTrigger id="successor-select" className="h-12 bg-background">
+                      <SelectTrigger id="successor-select" className="h-12 bg-background border-border/50 hover:border-border transition-colors">
                         <SelectValue placeholder="Choose a successor for your handover" />
                       </SelectTrigger>
-                      <SelectContent className="bg-background border-border shadow-lg z-50">
+                      <SelectContent className="bg-popover border-border/50 shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
                         {users.map((successor) => (
                           <SelectItem 
                             key={successor.id} 
                             value={successor.id}
-                            className="hover:bg-muted cursor-pointer"
+                            className="hover:bg-accent/50 cursor-pointer py-3"
                           >
                             <div className="flex items-center gap-3">
-                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Users className="h-4 w-4 text-primary" />
+                              </div>
                               <div>
-                                <span className="font-medium">{successor.email}</span>
+                                <span className="font-medium text-foreground">{successor.email}</span>
                                 <span className="text-xs text-muted-foreground ml-2 capitalize">({successor.role})</span>
                               </div>
                             </div>
@@ -353,61 +367,104 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
                 </div>
                 
                 {/* Drag and Drop Area */}
-                <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${isDragging ? 'border-primary bg-primary/5 scale-105' : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/10'}`} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
-                  <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">Drag and drop your document here</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Supports PDF, Word documents, and other common formats
-                  </p>
-                  <div className="space-y-2">
-                    <Button variant="outline" className="relative">
-                      <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".pdf,.doc,.docx,.txt,.md" onChange={handleFileSelect} />
-                      Choose File
-                    </Button>
-                    <p className="text-xs text-muted-foreground">Maximum file size: 20MB</p>
+                <div 
+                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+                    isDragging 
+                      ? 'border-primary bg-primary/5 scale-[1.02] shadow-[0_0_20px_rgba(var(--primary),0.15)]' 
+                      : 'border-border/30 hover:border-primary/50 hover:bg-muted/30'
+                  }`} 
+                  onDragOver={handleDragOver} 
+                  onDragLeave={handleDragLeave} 
+                  onDrop={handleDrop}
+                >
+                  <div className={`transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`}>
+                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2 text-foreground">
+                      Drag and drop your document here
+                    </h3>
+                    <p className="text-muted-foreground mb-6 leading-relaxed">
+                      Supports PDF, Word documents, and other common formats
+                    </p>
+                    <div className="space-y-3">
+                      <Button variant="outline" className="relative h-10 px-6">
+                        <input 
+                          type="file" 
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                          accept=".pdf,.doc,.docx,.txt,.md" 
+                          onChange={handleFileSelect} 
+                        />
+                        Choose File
+                      </Button>
+                      <p className="text-xs text-muted-foreground">Maximum file size: 20MB</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Instructions */}
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Please select a successor and upload your handover document. Once uploaded, your document will be processed and sent for analysis. 
-                    You'll then be able to access your knowledge handover dashboard.
+                <Alert className="bg-primary-soft border-primary/20">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-primary-foreground/80">
+                    Select a successor and upload your handover document. The document will be processed 
+                    and analyzed to create your knowledge transfer dashboard.
                   </AlertDescription>
                 </Alert>
-              </> : (/* Upload Progress */
-          <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  {uploadProgress === 100 ? <CheckCircle className="h-5 w-5 text-success" /> : <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="text-sm font-medium">
-                        {uploadProgress === 100 ? 'Processing...' : 'Uploading...'}
+              </>
+            ) : (
+              /* Upload Progress */
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    {uploadProgress === 100 ? (
+                      <div className="p-2 rounded-full bg-success/10">
+                        <CheckCircle className="h-5 w-5 text-success" />
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded-full bg-primary/10">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-3">
+                      <p className="text-sm font-semibold text-foreground">
+                        {uploadProgress === 100 ? 'Processing Document...' : 'Uploading Document...'}
                       </p>
-                      <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+                      <span className="text-sm font-medium text-muted-foreground">{uploadProgress}%</span>
                     </div>
-                    <Progress value={uploadProgress} className="h-2" />
+                    <Progress 
+                      value={uploadProgress} 
+                      className="h-2 bg-muted" 
+                    />
                   </div>
                 </div>
                 
-                {uploadedFile && <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{uploadedFile.name}</span>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {Math.round(uploadedFile.size / 1024)} KB
-                    </span>
-                  </div>}
+                {uploadedFile && (
+                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border border-border/30">
+                    <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-foreground block truncate">
+                        {uploadedFile.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {Math.round(uploadedFile.size / 1024)} KB
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-                {uploadProgress === 100 && <Alert className="border-success/20 bg-success-soft">
+                {uploadProgress === 100 && (
+                  <Alert className="border-success/20 bg-success-soft">
                     <CheckCircle className="h-4 w-4 text-success" />
                     <AlertDescription className="text-success">
                       Document uploaded successfully! Redirecting to dashboard...
                     </AlertDescription>
-                  </Alert>}
-              </div>)}
+                  </Alert>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 };

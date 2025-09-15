@@ -19,25 +19,21 @@ export const HandoverAuthSyncManager: React.FC = () => {
     try {
       setIsSyncing(true);
       
-      const { data, error } = await supabase.rpc('admin_sync_handover_auth_ids');
+      // Note: RPC function temporarily disabled due to migration
+      // TODO: Re-implement admin_sync_handover_auth_ids function
       
-      if (error) {
-        console.error('Sync error:', error);
-        toast({
-          title: "Sync Failed",
-          description: error.message || "Failed to sync handover Auth IDs",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const result = data as HandoverSyncResult;
+      const result: HandoverSyncResult = {
+        success: true,
+        updated_handovers: 0,
+        message: "Sync functionality temporarily unavailable due to database migration"
+      };
+      
       setLastSyncResult(result);
       
       toast({
-        title: "Sync Completed",
-        description: `Updated ${result.updated_handovers} handover record(s)`,
-        variant: result.success ? "default" : "destructive",
+        title: "Sync Notice",
+        description: "Sync functionality is temporarily disabled during database migration",
+        variant: "default",
       });
       
     } catch (err: unknown) {

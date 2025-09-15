@@ -128,21 +128,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             profile = upsertedProfile;
             console.log('AuthContext: Successfully created/updated profile with correct auth ID');
             
-            // Ensure handover consistency for this user
-            try {
-              const { error: handoverSyncError } = await supabase.rpc('ensure_handover_auth_consistency', {
-                user_email: supabaseUser.email,
-                auth_user_id: supabaseUser.id
-              });
-              
-              if (handoverSyncError) {
-                console.warn('AuthContext: Warning - Could not sync handover Auth IDs:', handoverSyncError);
-              } else {
-                console.log('AuthContext: Handover Auth ID consistency ensured');
-              }
-            } catch (syncError) {
-              console.warn('AuthContext: Warning - Handover sync failed:', syncError);
-            }
+            // Note: Handover sync temporarily disabled due to migration
+            // TODO: Re-implement ensure_handover_auth_consistency function
+            console.log('AuthContext: Handover sync temporarily disabled during migration');
           } else {
             console.error('AuthContext: Error upserting profile:', upsertError);
           }
