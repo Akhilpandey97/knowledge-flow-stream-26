@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserCheck, UserPlus, Settings, Activity } from 'lucide-react';
+import { Users, UserCheck, UserPlus, Settings, Activity, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { IntegrationsManager } from '@/components/admin/IntegrationsManager';
+import { HandoverAuthSyncManager } from '@/components/admin/HandoverAuthSyncManager';
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
@@ -86,10 +87,14 @@ export const AdminDashboard = () => {
       <AdminStats stats={stats} loading={loading} />
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             User Management
+          </TabsTrigger>
+          <TabsTrigger value="handovers" className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Handover Sync
           </TabsTrigger>
           <TabsTrigger value="integrations" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -103,6 +108,10 @@ export const AdminDashboard = () => {
 
         <TabsContent value="users" className="space-y-6">
           <UserManagement onStatsUpdate={fetchStats} />
+        </TabsContent>
+
+        <TabsContent value="handovers" className="space-y-6">
+          <HandoverAuthSyncManager />
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-6">
