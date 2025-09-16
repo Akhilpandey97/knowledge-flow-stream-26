@@ -24,11 +24,14 @@ import { ExportButton } from '@/components/ui/export-button';
 import { useHandover } from '@/hooks/useHandover';
 import { useToast } from '@/components/ui/use-toast';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
+import { PostUploadInsightsScreen } from './PostUploadInsightsScreen';
 
 export const ExitingEmployeeDashboard: React.FC = () => {
   const { tasks, loading, error, updateTask } = useHandover();
   const { toast } = useToast();
   const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
+  const [showInsightsScreen, setShowInsightsScreen] = useState(false);
+  const [handoverId, setHandoverId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskDetailModal, setTaskDetailModal] = useState<{ isOpen: boolean; task: HandoverTask | null }>({
@@ -136,6 +139,23 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     return (
       <DocumentUploadScreen 
         onUploadComplete={() => setHasUploadedInSession(true)}
+        onShowInsights={(id) => {
+          setHandoverId(id);
+          setShowInsightsScreen(true);
+        }}
+      />
+    );
+  }
+
+  // Show insights screen if triggered after upload
+  if (showInsightsScreen && handoverId) {
+    return (
+      <PostUploadInsightsScreen 
+        handoverId={handoverId}
+        onBackToDashboard={() => {
+          setShowInsightsScreen(false);
+          setHasUploadedInSession(true);
+        }}
       />
     );
   }

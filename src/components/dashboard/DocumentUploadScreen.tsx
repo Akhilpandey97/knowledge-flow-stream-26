@@ -12,9 +12,11 @@ import { useToast } from '@/components/ui/use-toast';
 import { useUsers } from '@/hooks/useUsers';
 interface DocumentUploadScreenProps {
   onUploadComplete: () => void;
+  onShowInsights?: (handoverId: string) => void;
 }
 export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
-  onUploadComplete
+  onUploadComplete,
+  onShowInsights
 }) => {
   const {
     user
@@ -184,6 +186,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       // Send document content via webhook with user and handover context
       console.log('Invoking webhook...');
       const {
+        data: webhookData,
         error: webhookError
       } = await supabase.functions.invoke('send-document-webhook', {
         body: {
@@ -208,7 +211,13 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
 
       // Wait a moment for user to see success, then proceed
       setTimeout(() => {
-        onUploadComplete();
+        // If we have onShowInsights and a handoverId, show insights screen
+        if (onShowInsights && handoverId) {
+          onShowInsights(handoverId);
+        } else {
+          // Fallback to the original behavior
+          onUploadComplete();
+        }
       }, 2000);
     } catch (error: unknown) {
       console.error('Upload error:', error);
@@ -222,7 +231,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       setUploadProgress(0);
       setUploadedFile(null);
     }
-  }, [user, selectedSuccessor, error, usersLoading, users.length, toast, onUploadComplete]);
+  }, [user, selectedSuccessor, error, usersLoading, users.length, toast, onUploadComplete, onShowInsights]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();

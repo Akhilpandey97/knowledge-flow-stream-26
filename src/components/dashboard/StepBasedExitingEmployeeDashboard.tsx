@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { StepBasedHandover, HandoverStep } from '@/types/handover';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
+import { PostUploadInsightsScreen } from './PostUploadInsightsScreen';
 import { StepSidebar } from './StepSidebar';
 import { PersonalAccountsStep } from './steps/PersonalAccountsStep';
 import { CustomerInsightsStep } from './steps/CustomerInsightsStep';
@@ -24,6 +25,8 @@ import { PendingTasksStep } from './steps/PendingTasksStep';
 
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
+  const [showInsightsScreen, setShowInsightsScreen] = useState(false);
+  const [handoverId, setHandoverId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
 
   // Initialize steps data
@@ -120,6 +123,23 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     return (
       <DocumentUploadScreen 
         onUploadComplete={() => setHasUploadedInSession(true)}
+        onShowInsights={(id) => {
+          setHandoverId(id);
+          setShowInsightsScreen(true);
+        }}
+      />
+    );
+  }
+
+  // Show insights screen if triggered after upload
+  if (showInsightsScreen && handoverId) {
+    return (
+      <PostUploadInsightsScreen 
+        handoverId={handoverId}
+        onBackToDashboard={() => {
+          setShowInsightsScreen(false);
+          setHasUploadedInSession(true);
+        }}
       />
     );
   }
