@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { CheckCircle, Target, Plus, Edit3, Video, LogOut, User, Users, UserCheck } from 'lucide-react';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
+import { InsightCollectionModal } from './InsightCollectionModal';
 interface HandoverTask {
   id: string;
   title: string;
@@ -20,6 +21,8 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
   const [activeTab, setActiveTab] = useState('exiting');
   const [demoMode, setDemoMode] = useState(true);
+  const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
 
   // Sample handover tasks data
   const [tasks, setTasks] = useState<HandoverTask[]>([{
@@ -69,6 +72,34 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
       default:
         return 'text-gray-600 bg-gray-50 border-gray-200';
     }
+  };
+
+  const handleTaskClick = (task: HandoverTask) => {
+    setSelectedTask(task);
+    setIsInsightModalOpen(true);
+  };
+
+  const handleSaveInsights = (taskId: string, insights: string, file?: File) => {
+    // Update the task with insights and mark as completed
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === taskId 
+          ? { 
+              ...task, 
+              isCompleted: true, 
+              notes: insights 
+            }
+          : task
+      )
+    );
+    
+    // Log the file if provided (in real app, upload to server)
+    if (file) {
+      console.log('File would be uploaded:', file.name);
+    }
+    
+    setIsInsightModalOpen(false);
+    setSelectedTask(null);
   };
 
   // Always show document upload screen first for exiting employees
@@ -158,15 +189,30 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                         </div>}
                       
                       <div className="flex gap-3">
-                        <Button variant="outline" size="sm" className="text-xs">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => handleTaskClick(task)}
+                        >
                           <Plus className="h-3 w-3 mr-1" />
                           Add Notes
                         </Button>
-                        <Button variant="outline" size="sm" className="text-xs">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => handleTaskClick(task)}
+                        >
                           <Edit3 className="h-3 w-3 mr-1" />
                           Edit Details
                         </Button>
-                        <Button variant="outline" size="sm" className="text-xs">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => handleTaskClick(task)}
+                        >
                           <Video className="h-3 w-3 mr-1" />
                           Record Video
                         </Button>
@@ -178,5 +224,13 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* Insight Collection Modal */}
+      <InsightCollectionModal
+        isOpen={isInsightModalOpen}
+        onClose={() => setIsInsightModalOpen(false)}
+        task={selectedTask}
+        onSaveAndNext={handleSaveInsights}
+      />
     </div>;
 };
