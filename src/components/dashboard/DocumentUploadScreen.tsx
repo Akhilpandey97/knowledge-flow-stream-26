@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useUsers } from '@/hooks/useUsers';
+
 interface DocumentUploadScreenProps {
   onUploadComplete: () => void;
 }
@@ -33,6 +34,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
+  const [redirectToDashboard, setRedirectToDashboard] = useState(false);
   
   const handleFileUpload = useCallback(async (file: File) => {
     console.log('Starting file upload process...', {
