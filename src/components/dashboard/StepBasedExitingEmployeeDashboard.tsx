@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,8 @@ import {
   User,
   Users,
   Workflow,
-  ClipboardList
+  ClipboardList,
+  Loader2
 } from 'lucide-react';
 import { StepBasedHandover, HandoverStep } from '@/types/handover';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
@@ -21,6 +22,7 @@ import { PersonalAccountsStep } from './steps/PersonalAccountsStep';
 import { CustomerInsightsStep } from './steps/CustomerInsightsStep';
 import { InternalWorkflowsStep } from './steps/InternalWorkflowsStep';
 import { PendingTasksStep } from './steps/PendingTasksStep';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
@@ -118,9 +120,11 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   // Always show document upload screen first for exiting employees
   if (!hasUploadedInSession) {
     return (
-      <DocumentUploadScreen 
-        onUploadComplete={() => setHasUploadedInSession(true)}
-      />
+      <ErrorBoundary>
+        <DocumentUploadScreen 
+          onUploadComplete={() => setHasUploadedInSession(true)}
+        />
+      </ErrorBoundary>
     );
   }
 

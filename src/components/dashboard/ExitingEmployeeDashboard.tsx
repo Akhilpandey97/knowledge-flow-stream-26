@@ -23,12 +23,10 @@ import { TaskDetailModal } from './TaskDetailModal';
 import { ExportButton } from '@/components/ui/export-button';
 import { useHandover } from '@/hooks/useHandover';
 import { useToast } from '@/components/ui/use-toast';
-import { DocumentUploadScreen } from './DocumentUploadScreen';
 
-export const ExitingEmployeeDashboard: React.FC = () => {
+const ExitingEmployeeDashboard: React.FC = () => {
   const { tasks, loading, error, updateTask } = useHandover();
   const { toast } = useToast();
-  const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskDetailModal, setTaskDetailModal] = useState<{ isOpen: boolean; task: HandoverTask | null }>({
@@ -128,15 +126,6 @@ export const ExitingEmployeeDashboard: React.FC = () => {
           Error loading handover data: {error}
         </AlertDescription>
       </Alert>
-    );
-  }
-
-  // Always show document upload screen first for exiting employees
-  if (!hasUploadedInSession) {
-    return (
-      <DocumentUploadScreen 
-        onUploadComplete={() => setHasUploadedInSession(true)}
-      />
     );
   }
 
@@ -304,3 +293,5 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default ExitingEmployeeDashboard;

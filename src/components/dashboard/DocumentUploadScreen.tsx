@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -10,18 +10,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useUsers } from '@/hooks/useUsers';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
+
+// Lazy load ExitingEmployeeDashboard to break circular dependency
+const ExitingEmployeeDashboard = React.lazy(() => import('./ExitingEmployeeDashboard'));
 interface DocumentUploadScreenProps {
-  onUploadComplete: () => void;
+  onUploadComplete?: () => void;
 }
+
 export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
   onUploadComplete
 }) => {
-  const {
-    user
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const {
     users,
     loading: usersLoading,
@@ -33,6 +34,7 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
+  const [showDashboard, setShowDashboard] = useState(false);
   
   const handleFileUpload = useCallback(async (file: File) => {
     console.log('Starting file upload process...', {
@@ -208,7 +210,12 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
 
       // Wait a moment for user to see success, then proceed
       setTimeout(() => {
-        onUploadComplete();
+        if (onUploadComplete) {
+          onUploadComplete();
+        } else {
+          // Only show dashboard if no callback provided
+          setShowDashboard(true);
+        }
       }, 2000);
     } catch (error: unknown) {
       console.error('Upload error:', error);
@@ -249,6 +256,27 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       handleFileUpload(files[0]);
     }
   }, [handleFileUpload]);
+
+  // Show dashboard after successful upload
+  if (showDashboard) {
+    return (
+      <ErrorBoundary>
+        <Suspense 
+          fallback={
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-lg font-medium text-muted-foreground">Loading dashboard...</span>
+              </div>
+            </div>
+          }
+        >
+          <ExitingEmployeeDashboard />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-background to-muted/20">
       <div className="w-full max-w-2xl space-y-8">
