@@ -25,7 +25,13 @@ import { useHandover } from '@/hooks/useHandover';
 import { useToast } from '@/components/ui/use-toast';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 
-export const ExitingEmployeeDashboard: React.FC = () => {
+interface ExitingEmployeeDashboardProps {
+  skipUploadScreen?: boolean;
+}
+
+export const ExitingEmployeeDashboard: React.FC<ExitingEmployeeDashboardProps> = ({ 
+  skipUploadScreen = false 
+}) => {
   const { tasks, loading, error, updateTask } = useHandover();
   const { toast } = useToast();
   const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
@@ -131,11 +137,11 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     );
   }
 
-  // Always show document upload screen first for exiting employees
-  if (!hasUploadedInSession) {
+  // Always show document upload screen first for exiting employees (unless skipped)
+  if (!hasUploadedInSession && !skipUploadScreen) {
     return (
       <DocumentUploadScreen 
-        onUploadComplete={() => setHasUploadedInSession(true)}
+        showDashboardAfterUpload={true}
       />
     );
   }

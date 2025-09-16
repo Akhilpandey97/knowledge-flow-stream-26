@@ -12,10 +12,12 @@ import { useToast } from '@/components/ui/use-toast';
 import { useUsers } from '@/hooks/useUsers';
 
 interface DocumentUploadScreenProps {
-  onUploadComplete: () => void;
+  onUploadComplete?: () => void;
+  showDashboardAfterUpload?: boolean;
 }
 export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
-  onUploadComplete
+  onUploadComplete,
+  showDashboardAfterUpload = false
 }) => {
   const {
     user
@@ -210,7 +212,11 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
 
       // Wait a moment for user to see success, then proceed
       setTimeout(() => {
-        onUploadComplete();
+        if (showDashboardAfterUpload) {
+          setRedirectToDashboard(true);
+        } else if (onUploadComplete) {
+          onUploadComplete();
+        }
       }, 2000);
     } catch (error: unknown) {
       console.error('Upload error:', error);
@@ -224,7 +230,21 @@ export const DocumentUploadScreen: React.FC<DocumentUploadScreenProps> = ({
       setUploadProgress(0);
       setUploadedFile(null);
     }
-  }, [user, selectedSuccessor, error, usersLoading, users.length, toast, onUploadComplete]);
+  }, [user, selectedSuccessor, error, usersLoading, users.length, toast, onUploadComplete, showDashboardAfterUpload]);
+
+  // If upload is complete and we should show dashboard, render ExitingEmployeeDashboard
+  if (redirectToDashboard && showDashboardAfterUpload) {
+    // Use dynamic import to avoid circular dependency
+    const ExitingEmployeeDashboard = React.lazy(() => 
+      import('./ExitingEmployeeDashboard').then(module => ({ default: module.ExitingEmployeeDashboard }))
+    );
+    
+    return (
+      <React.Suspense fallback={<div className="flex items-center justify-center min-h-96"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+        <ExitingEmployeeDashboard skipUploadScreen={true} />
+      </React.Suspense>
+    );
+  }
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
