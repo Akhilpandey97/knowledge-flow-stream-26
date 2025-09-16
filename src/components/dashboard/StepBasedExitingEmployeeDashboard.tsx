@@ -5,19 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { 
-  CheckCircle,
-  Target,
-  Plus,
-  Edit3,
-  Video,
-  LogOut,
-  User,
-  Users,
-  UserCheck
-} from 'lucide-react';
+import { CheckCircle, Target, Plus, Edit3, Video, LogOut, User, Users, UserCheck } from 'lucide-react';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
-
 interface HandoverTask {
   id: string;
   title: string;
@@ -27,54 +16,46 @@ interface HandoverTask {
   priority: 'low' | 'medium' | 'high' | 'critical';
   notes?: string;
 }
-
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
   const [activeTab, setActiveTab] = useState('exiting');
   const [demoMode, setDemoMode] = useState(true);
 
   // Sample handover tasks data
-  const [tasks, setTasks] = useState<HandoverTask[]>([
-    {
-      id: '1',
-      title: 'Client Account Handover - TechCorp',
-      description: 'Transfer all TechCorp account details, meeting notes, and contact information',
-      category: 'Client Management',
-      isCompleted: true,
-      priority: 'critical',
-      notes: 'Completed meeting with Sarah. All files transferred.'
-    },
-    {
-      id: '2',
-      title: 'Project Documentation - Mobile App',
-      description: 'Document current project status and next steps',
-      category: 'Project Management',
-      isCompleted: false,
-      priority: 'high'
-    },
-    {
-      id: '3',
-      title: 'Team Introductions',
-      description: 'Introduce successor to key team members and stakeholders',
-      category: 'Team Management',
-      isCompleted: false,
-      priority: 'medium'
-    },
-    {
-      id: '4',
-      title: 'System Access & Credentials',
-      description: 'Transfer system access and document credentials',
-      category: 'System Management',
-      isCompleted: true,
-      priority: 'critical'
-    }
-  ]);
-
+  const [tasks, setTasks] = useState<HandoverTask[]>([{
+    id: '1',
+    title: 'Client Account Handover - TechCorp',
+    description: 'Transfer all TechCorp account details, meeting notes, and contact information',
+    category: 'Client Management',
+    isCompleted: true,
+    priority: 'critical',
+    notes: 'Completed meeting with Sarah. All files transferred.'
+  }, {
+    id: '2',
+    title: 'Project Documentation - Mobile App',
+    description: 'Document current project status and next steps',
+    category: 'Project Management',
+    isCompleted: false,
+    priority: 'high'
+  }, {
+    id: '3',
+    title: 'Team Introductions',
+    description: 'Introduce successor to key team members and stakeholders',
+    category: 'Team Management',
+    isCompleted: false,
+    priority: 'medium'
+  }, {
+    id: '4',
+    title: 'System Access & Credentials',
+    description: 'Transfer system access and document credentials',
+    category: 'System Management',
+    isCompleted: true,
+    priority: 'critical'
+  }]);
   const completedTasks = tasks.filter(task => task.isCompleted).length;
   const totalTasks = tasks.length;
-  const progressPercentage = Math.round((completedTasks / totalTasks) * 100);
+  const progressPercentage = Math.round(completedTasks / totalTasks * 100);
   const remainingTasks = totalTasks - completedTasks;
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'critical':
@@ -92,91 +73,14 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
 
   // Always show document upload screen first for exiting employees
   if (!hasUploadedInSession) {
-    return (
-      <DocumentUploadScreen 
-        onUploadComplete={() => setHasUploadedInSession(true)}
-      />
-    );
+    return <DocumentUploadScreen onUploadComplete={() => setHasUploadedInSession(true)} />;
   }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
+  return <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Left side - Brand and Department */}
-            <div className="flex items-center gap-6">
-              <h1 className="text-2xl font-bold text-blue-600">Seamless Handover</h1>
-              <span className="text-gray-600 font-medium">Sales Department</span>
-            </div>
-
-            {/* Right side - User info and logout */}
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="font-semibold text-gray-900">John Doe</div>
-                <div className="text-sm text-gray-500">Exiting Employee</div>
-              </div>
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-blue-600 text-white font-semibold">JD</AvatarFallback>
-              </Avatar>
-              <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      
 
       {/* Navigation Tabs */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-8">
-              <button
-                onClick={() => setActiveTab('exiting')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === 'exiting'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <User className="h-4 w-4" />
-                Exiting Employee
-              </button>
-              <button
-                onClick={() => setActiveTab('successor')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === 'successor'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <UserCheck className="h-4 w-4" />
-                Successor
-              </button>
-              <button
-                onClick={() => setActiveTab('hr')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === 'hr'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Users className="h-4 w-4" />
-                HR Manager
-              </button>
-            </div>
-
-            {/* Demo Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Demo Mode</span>
-              <Switch checked={demoMode} onCheckedChange={setDemoMode} />
-            </div>
-          </div>
-        </div>
-      </nav>
+      
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -207,11 +111,9 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
             </div>
             
             <div className="mb-4">
-              <Progress 
-                value={progressPercentage} 
-                className="h-3 bg-gray-200"
-                style={{"--progress-bar-color": "#f97316"} as React.CSSProperties}
-              />
+              <Progress value={progressPercentage} className="h-3 bg-gray-200" style={{
+              "--progress-bar-color": "#f97316"
+            } as React.CSSProperties} />
             </div>
             
             <div className="flex items-center justify-between text-sm text-gray-600">
@@ -228,28 +130,18 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
             <p className="text-gray-600 mb-6">Complete these domain-specific tasks for a smooth handover</p>
             
             <div className="space-y-4">
-              {tasks.map((task) => (
-                <div key={task.id} className="border border-gray-200 rounded-lg p-4">
+              {tasks.map(task => <div key={task.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 mt-1">
-                      <CheckCircle 
-                        className={`h-5 w-5 ${
-                          task.isCompleted ? 'text-blue-600' : 'text-gray-300'
-                        }`}
-                      />
+                      <CheckCircle className={`h-5 w-5 ${task.isCompleted ? 'text-blue-600' : 'text-gray-300'}`} />
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className={`font-medium ${
-                          task.isCompleted ? 'line-through text-gray-500' : 'text-gray-900'
-                        }`}>
+                        <h4 className={`font-medium ${task.isCompleted ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                           {task.title}
                         </h4>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs ${getPriorityColor(task.priority)}`}
-                        >
+                        <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
                           {task.priority}
                         </Badge>
                       </div>
@@ -257,15 +149,13 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                       <p className="text-gray-600 text-sm mb-3">{task.description}</p>
                       <p className="text-xs text-gray-500 mb-3">Category: {task.category}</p>
                       
-                      {task.notes && (
-                        <div className="bg-green-50 border border-green-200 rounded p-3 mb-3">
+                      {task.notes && <div className="bg-green-50 border border-green-200 rounded p-3 mb-3">
                           <div className="flex items-center gap-2 mb-1">
                             <CheckCircle className="h-4 w-4 text-green-600" />
                             <span className="text-sm font-medium text-green-800">Notes Added</span>
                           </div>
                           <p className="text-sm text-green-700">{task.notes}</p>
-                        </div>
-                      )}
+                        </div>}
                       
                       <div className="flex gap-3">
                         <Button variant="outline" size="sm" className="text-xs">
@@ -283,12 +173,10 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
           </CardContent>
         </Card>
       </main>
-    </div>
-  );
+    </div>;
 };
