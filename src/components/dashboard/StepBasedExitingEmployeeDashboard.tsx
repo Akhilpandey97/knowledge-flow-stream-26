@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { CheckCircle, Target, Plus, Edit3, Video, LogOut, User, Users, UserCheck } from 'lucide-react';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 import { InsightCollectionModal } from './InsightCollectionModal';
+import { ZoomMeetingModal } from './ZoomMeetingModal';
 import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 interface HandoverTask {
   id: string;
@@ -23,6 +24,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('exiting');
   const [demoMode, setDemoMode] = useState(true);
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
+  const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
 
   // Sample handover tasks data
@@ -78,6 +80,11 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const handleTaskClick = (task: HandoverTask) => {
     setSelectedTask(task);
     setIsInsightModalOpen(true);
+  };
+
+  const handleRecordVideoClick = (task: HandoverTask) => {
+    setSelectedTask(task);
+    setIsZoomModalOpen(true);
   };
 
   const handleSaveInsights = (taskId: string, insights: string, file?: File) => {
@@ -216,7 +223,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                           variant="outline" 
                           size="sm" 
                           className="text-xs"
-                          onClick={() => handleTaskClick(task)}
+                          onClick={() => handleRecordVideoClick(task)}
                         >
                           <Video className="h-3 w-3 mr-1" />
                           Record Video
@@ -236,6 +243,14 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         onClose={() => setIsInsightModalOpen(false)}
         task={selectedTask}
         onSaveAndNext={handleSaveInsights}
+      />
+
+      {/* Zoom Meeting Modal */}
+      <ZoomMeetingModal
+        isOpen={isZoomModalOpen}
+        onClose={() => setIsZoomModalOpen(false)}
+        task={selectedTask}
+        allTasks={tasks}
       />
     </div>;
 };
