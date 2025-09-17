@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileText, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -21,7 +22,7 @@ interface InsightCollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: HandoverTask | null;
-  onSaveAndNext: (taskId: string, insights: string, file?: File) => void;
+  onSaveAndNext: (taskId: string, topic: string, insights: string, file?: File) => void;
 }
 
 export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
@@ -31,8 +32,25 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
   onSaveAndNext
 }) => {
   const [insights, setInsights] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Topic options based on task category
+  const getTopicOptions = (category: string) => {
+    switch (category) {
+      case 'Client Management':
+        return ['Client Relationship', 'Account Management', 'Project History', 'Communication Preferences'];
+      case 'Project Management':
+        return ['Project Status', 'Technical Documentation', 'Timeline & Milestones', 'Team Responsibilities'];
+      case 'Team Management':
+        return ['Team Dynamics', 'Key Contacts', 'Meeting Schedules', 'Collaboration Tools'];
+      case 'System Management':
+        return ['System Access', 'Credentials', 'Technical Setup', 'Troubleshooting'];
+      default:
+        return ['General Information', 'Process Notes', 'Important Contacts', 'Best Practices'];
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -61,9 +79,10 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
   };
 
   const handleSaveAndNext = () => {
-    if (task && insights.trim()) {
-      onSaveAndNext(task.id, insights, selectedFile || undefined);
+    if (task && insights.trim() && selectedTopic) {
+      onSaveAndNext(task.id, selectedTopic, insights, selectedFile || undefined);
       setInsights('');
+      setSelectedTopic('');
       setSelectedFile(null);
       onClose();
     }
@@ -93,6 +112,25 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
               <p className="text-xs text-gray-500">Category: {task.category}</p>
             </CardContent>
           </Card>
+
+          {/* Topic Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="topic" className="text-sm font-medium">
+              Select Topic *
+            </Label>
+            <Select value={selectedTopic} onValueChange={setSelectedTopic}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a topic for your insights..." />
+              </SelectTrigger>
+              <SelectContent>
+                {getTopicOptions(task.category).map(topic => (
+                  <SelectItem key={topic} value={topic}>
+                    {topic}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Insights Input */}
           <div className="space-y-2">
@@ -190,10 +228,10 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
             <Button
               type="button"
               onClick={handleSaveAndNext}
-              disabled={!insights.trim()}
+              disabled={!insights.trim() || !selectedTopic}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              Save & Next
+              Add Insight
             </Button>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { CheckCircle, Target, Plus, Edit3, Video, LogOut, User, Users, UserCheck
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 import { InsightCollectionModal } from './InsightCollectionModal';
 import { ZoomMeetingModal } from './ZoomMeetingModal';
+import { ShowInsightsModal } from './ShowInsightsModal';
 import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 interface HandoverTask {
   id: string;
@@ -25,6 +26,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [demoMode, setDemoMode] = useState(true);
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
+  const [isShowInsightsModalOpen, setIsShowInsightsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
 
   // Sample handover tasks data
@@ -87,7 +89,12 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     setIsZoomModalOpen(true);
   };
 
-  const handleSaveInsights = (taskId: string, insights: string, file?: File) => {
+  const handleShowInsightsClick = (task: HandoverTask) => {
+    setSelectedTask(task);
+    setIsShowInsightsModalOpen(true);
+  };
+
+  const handleSaveInsights = (taskId: string, topic: string, insights: string, file?: File) => {
     // Update the task with insights and mark as completed
     setTasks(prevTasks => 
       prevTasks.map(task => 
@@ -95,7 +102,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
           ? { 
               ...task, 
               isCompleted: true, 
-              notes: insights 
+              notes: `${topic}: ${insights}` 
             }
           : task
       )
@@ -108,6 +115,11 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     
     setIsInsightModalOpen(false);
     setSelectedTask(null);
+  };
+
+  const handleEditInsight = (insight: any) => {
+    // In real app, this would open an edit modal
+    console.log('Edit insight:', insight);
   };
 
   // Show document upload screen only for first-time users (who haven't uploaded before)
@@ -208,16 +220,16 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                           onClick={() => handleTaskClick(task)}
                         >
                           <Plus className="h-3 w-3 mr-1" />
-                          Add Notes
+                          Add Insights
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
                           className="text-xs"
-                          onClick={() => handleTaskClick(task)}
+                          onClick={() => handleShowInsightsClick(task)}
                         >
                           <Edit3 className="h-3 w-3 mr-1" />
-                          Edit Details
+                          Show Insights
                         </Button>
                         <Button 
                           variant="outline" 
@@ -226,7 +238,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                           onClick={() => handleRecordVideoClick(task)}
                         >
                           <Video className="h-3 w-3 mr-1" />
-                          Record Video
+                          Meetings
                         </Button>
                       </div>
                     </div>
@@ -251,6 +263,14 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         onClose={() => setIsZoomModalOpen(false)}
         task={selectedTask}
         allTasks={tasks}
+      />
+
+      {/* Show Insights Modal */}
+      <ShowInsightsModal
+        isOpen={isShowInsightsModalOpen}
+        onClose={() => setIsShowInsightsModalOpen(false)}
+        task={selectedTask}
+        onEditInsight={handleEditInsight}
       />
     </div>;
 };
