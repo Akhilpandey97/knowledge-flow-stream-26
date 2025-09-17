@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { CheckCircle, Target, Plus, Edit3, Video, LogOut, User, Users, UserCheck } from 'lucide-react';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 import { InsightCollectionModal } from './InsightCollectionModal';
+import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 interface HandoverTask {
   id: string;
   title: string;
@@ -18,7 +19,7 @@ interface HandoverTask {
   notes?: string;
 }
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
-  const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
+  const { hasUploadedDocument, loading, markDocumentUploaded } = useDocumentUpload();
   const [activeTab, setActiveTab] = useState('exiting');
   const [demoMode, setDemoMode] = useState(true);
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
@@ -102,9 +103,13 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     setSelectedTask(null);
   };
 
-  // Always show document upload screen first for exiting employees
-  if (!hasUploadedInSession) {
-    return <DocumentUploadScreen onUploadComplete={() => setHasUploadedInSession(true)} />;
+  // Show document upload screen only for first-time users (who haven't uploaded before)
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+  
+  if (!hasUploadedDocument) {
+    return <DocumentUploadScreen onUploadComplete={markDocumentUploaded} />;
   }
   return <div className="min-h-screen bg-gray-50">
       {/* Header */}
