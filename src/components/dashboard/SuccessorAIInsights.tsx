@@ -1,54 +1,95 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useAIInsights, AIInsight } from '@/hooks/useAIInsights';
-import { format } from 'date-fns';
 
 interface SuccessorAIInsightsProps {
   handoverId?: string;
 }
 
+interface GroupedInsight {
+  metric?: string;
+  value?: string;
+  insight?: string;
+  title?: string;
+  detail?: string;
+}
+
 export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({ handoverId }) => {
   const { insights, loading, error } = useAIInsights(handoverId);
 
-  const renderInsightCard = (insight: AIInsight) => (
-    <div key={insight.id} className="bg-background border rounded-lg p-4 space-y-3 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-2">
-            <h4 className="font-medium text-foreground leading-tight">{insight.title}</h4>
-            <Badge variant="secondary" className="text-xs">AI</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">{insight.description}</p>
-          <p className="text-xs text-muted-foreground">
-            {format(new Date(insight.created_at), 'MMM d, yyyy • h:mm a')}
-          </p>
-        </div>
-        <div className={`p-2 rounded-lg ${getInsightBgClass(insight.type)} flex-shrink-0`}>
-          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${getInsightIconBgClass(insight.type)}`}>
-            <span className="text-xs text-white">{insight.icon}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  // Group insights by category
+  const groupInsightsByCategory = (insights: AIInsight[]) => {
+    const revenueInsights: GroupedInsight[] = [];
+    const playBookActions: GroupedInsight[] = [];
+    const criticalItems: GroupedInsight[] = [];
 
-  const renderEmptyState = () => (
-    <div className="text-center py-8">
-      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-        <span className="text-2xl">🤖</span>
-      </div>
-      <h4 className="font-medium text-foreground mb-2">No AI insights yet</h4>
-      <p className="text-sm text-muted-foreground mb-4">
-        Upload documents to get personalized knowledge transfer insights from AI analysis.
-      </p>
-      <Button variant="outline" size="sm">
-        Upload Documents
-      </Button>
-    </div>
-  );
+    insights.forEach(insight => {
+      const insightText = insight.description || insight.title || '';
+      
+      if (insightText.includes('Revenue Growth & Retention') || insightText.includes('Renewals') || insightText.includes('Upsell') || insightText.includes('Churn Risk')) {
+        // Parse revenue insights
+        if (insightText.includes('Renewals Secured')) {
+          revenueInsights.push({
+            metric: "Renewals Secured",
+            value: "78% of contracts renewed",
+            insight: "High-value contracts renewed but 2 major accounts pending."
+          });
+        } else if (insightText.includes('Upsell Opportunities')) {
+          revenueInsights.push({
+            metric: "Upsell Opportunities", 
+            value: "₹35L identified",
+            insight: "Cross-sell opportunities in tech add-ons for Acme Corp."
+          });
+        } else if (insightText.includes('Churn Risk')) {
+          revenueInsights.push({
+            metric: "Churn Risk Accounts",
+            value: "3 flagged (₹42L pipeline)", 
+            insight: "Zenith Ltd and Nova Tech require immediate action to avoid losses."
+          });
+        }
+      } else if (insightText.includes('AI Successor Playbook') || insightText.includes('Meet CFO') || insightText.includes('Re-negotiate') || insightText.includes('Intro calls')) {
+        // Parse playbook actions
+        if (insightText.includes('Meet CFO')) {
+          playBookActions.push({
+            title: "Meet CFO of Zenith Ltd",
+            detail: "22% revenue exposure, contract expiring in 30 days"
+          });
+        } else if (insightText.includes('Re-negotiate')) {
+          playBookActions.push({
+            title: "Re-negotiate SLA with Nova Tech",
+            detail: "40% churn risk if unresolved"
+          });
+        } else if (insightText.includes('Intro calls')) {
+          playBookActions.push({
+            title: "Intro calls with 2 strategic accounts",
+            detail: "Strengthens 70% of pipeline"
+          });
+        }
+      } else if (insightText.includes('Critical') || insightText.includes('Acme Corp') || insightText.includes('Zenith Ltd Contract') || insightText.includes('Delayed Payments')) {
+        // Parse critical items
+        if (insightText.includes('Acme Corp')) {
+          criticalItems.push({
+            title: "Acme Corp Renewal Risk",
+            insight: "AI predicts 68% churn probability. Escalation required within 2 weeks."
+          });
+        } else if (insightText.includes('Zenith Ltd Contract')) {
+          criticalItems.push({
+            title: "Zenith Ltd Contract Expiry",
+            insight: "Contract ending in 30 days. Direct successor introduction recommended."
+          });
+        } else if (insightText.includes('Delayed Payments')) {
+          criticalItems.push({
+            title: "Delayed Payments - Nova Tech",
+            insight: "Late payments for last 2 months. High likelihood of dissatisfaction."
+          });
+        }
+      }
+    });
+
+    return { revenueInsights, playBookActions, criticalItems };
+  };
 
   const renderLoadingState = () => (
     <div className="flex items-center justify-center py-8">
@@ -65,60 +106,78 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({ handov
     </div>
   );
 
+  if (loading) {
+    return (
+      <Card>
+        <CardContent>
+          {renderLoadingState()}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent>
+          {renderErrorState()}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { revenueInsights, playBookActions, criticalItems } = groupInsightsByCategory(insights);
+
   return (
-    <Card className="shadow-medium">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <div className="p-1 bg-primary-soft rounded">
-            <div className="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
-              <span className="text-xs text-white font-bold">✨</span>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Revenue Growth & Retention */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue Growth & Retention</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-3 text-sm text-gray-700">
+            {revenueInsights.map((item, idx) => (
+              <li key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <strong>{item.metric}</strong><br />
+                {item.value}<br />
+                <em>{item.insight}</em>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      {/* AI Successor Playbook */}
+      <Card>
+        <CardHeader>
+          <CardTitle>AI Successor Playbook</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {playBookActions.map((action, idx) => (
+            <div key={idx} className="p-3 bg-blue-50 rounded-xl shadow-sm">
+              <h4 className="font-semibold text-blue-900">{action.title}</h4>
+              <p className="text-sm text-blue-700">{action.detail}</p>
             </div>
-          </div>
-          AI Knowledge Transfer Insights
-        </CardTitle>
-        <CardDescription>
-          Personalized <span className="text-primary font-medium">recommendations</span> to accelerate your onboarding
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {loading && renderLoadingState()}
-          {error && !loading && renderErrorState()}
-          {!loading && !error && insights.length === 0 && renderEmptyState()}
-          {!loading && !error && insights.length > 0 && (
-            <div className="space-y-4">
-              {insights.map(renderInsightCard)}
+          ))}
+          <Button className="w-full mt-4">Generate Next Best Actions</Button>
+        </CardContent>
+      </Card>
+
+      {/* Critical & Priority Items */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Critical & Priority AI Insights</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {criticalItems.map((item, idx) => (
+            <div key={idx} className="p-3 bg-red-50 rounded-xl border border-red-200">
+              <h4 className="font-semibold text-red-900">{item.title}</h4>
+              <p className="text-sm text-red-700">{item.insight}</p>
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
   );
-};
-
-// Helper functions for insight styling (matching the existing styles in SuccessorDashboard)
-const getInsightBgClass = (type: string): string => {
-  switch (type) {
-    case 'critical':
-      return 'bg-critical-soft';
-    case 'warning':
-      return 'bg-warning-soft';
-    case 'success':
-      return 'bg-success-soft';
-    default:
-      return 'bg-muted';
-  }
-};
-
-const getInsightIconBgClass = (type: string): string => {
-  switch (type) {
-    case 'critical':
-      return 'bg-critical';
-    case 'warning':
-      return 'bg-warning';
-    case 'success':
-      return 'bg-success';
-    default:
-      return 'bg-primary';
-  }
 };
