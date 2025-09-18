@@ -154,106 +154,110 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Button>
-        <div className="flex-1">
-          <h2 className="text-3xl font-bold text-foreground">Manage Handovers</h2>
-          <p className="text-muted-foreground">
-            Create and manage knowledge transfer processes
-          </p>
+        <div className="flex-1 flex items-center gap-4">
+          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Handover
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create New Handover</DialogTitle>
+                <DialogDescription>
+                  Set up a new knowledge transfer process between employees
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="exitingEmployee">Exiting Employee</Label>
+                  <Select value={formData.exitingEmployee} onValueChange={(value) => setFormData({...formData, exitingEmployee: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select exiting employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {mockEmployees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name} - {emp.position}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="position">Position</Label>
+                  <Input
+                    id="position"
+                    value={formData.position}
+                    onChange={(e) => setFormData({...formData, position: e.target.value})}
+                    placeholder="Enter position title"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="successor">Successor (Optional)</Label>
+                  <Select value={formData.successor} onValueChange={(value) => setFormData({...formData, successor: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select successor or leave empty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredSuccessors.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name} - {emp.position}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate">Due Date</Label>
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    value={formData.dueDate}
+                    onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button onClick={handleCreateHandover} className="flex-1">
+                    Create Handover
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button variant="outline">
+            <Users className="w-4 h-4 mr-2" />
+            Add Exiting Employee
+          </Button>
+          <Button variant="outline">
+            <Users className="w-4 h-4 mr-2" />
+            Add Successor
+          </Button>
         </div>
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Handover
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Handover</DialogTitle>
-              <DialogDescription>
-                Set up a new knowledge transfer process between employees
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="exitingEmployee">Exiting Employee</Label>
-                <Select value={formData.exitingEmployee} onValueChange={(value) => setFormData({...formData, exitingEmployee: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select exiting employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockEmployees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name} - {emp.position}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="position">Position</Label>
-                <Input
-                  id="position"
-                  value={formData.position}
-                  onChange={(e) => setFormData({...formData, position: e.target.value})}
-                  placeholder="Enter position title"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="successor">Successor (Optional)</Label>
-                <Select value={formData.successor} onValueChange={(value) => setFormData({...formData, successor: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select successor or leave empty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredSuccessors.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name} - {emp.position}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handleCreateHandover} className="flex-1">
-                  Create Handover
-                </Button>
-                <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Summary Stats */}

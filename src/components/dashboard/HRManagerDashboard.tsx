@@ -160,7 +160,7 @@ export const HRManagerDashboard: React.FC = () => {
           <ExportButton title="Export Report" />
           <Button onClick={() => setShowManageHandovers(true)}>
             <Users className="w-4 h-4 mr-2" />
-            Manage Handovers
+            Create Handovers
           </Button>
         </div>
       </div>
