@@ -18,6 +18,7 @@ interface HandoverTask {
   category: string;
   isCompleted: boolean;
   priority: 'low' | 'medium' | 'high' | 'critical';
+  deadline: string;
   notes?: string;
 }
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
@@ -37,6 +38,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     category: 'Client Management',
     isCompleted: true,
     priority: 'critical',
+    deadline: 'Jan 10, 2024',
     notes: 'Completed meeting with Sarah. All files transferred.'
   }, {
     id: '2',
@@ -44,26 +46,30 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     description: 'Document current project status and next steps',
     category: 'Project Management',
     isCompleted: false,
-    priority: 'high'
+    priority: 'high',
+    deadline: 'Jan 12, 2024'
   }, {
     id: '3',
     title: 'Team Introductions',
     description: 'Introduce successor to key team members and stakeholders',
     category: 'Team Management',
     isCompleted: false,
-    priority: 'medium'
+    priority: 'medium',
+    deadline: 'Jan 14, 2024'
   }, {
     id: '4',
     title: 'System Access & Credentials',
     description: 'Transfer system access and document credentials',
     category: 'System Management',
     isCompleted: true,
-    priority: 'critical'
+    priority: 'critical',
+    deadline: 'Jan 8, 2024'
   }]);
   const completedTasks = tasks.filter(task => task.isCompleted).length;
   const totalTasks = tasks.length;
   const progressPercentage = Math.round(completedTasks / totalTasks * 100);
   const remainingTasks = totalTasks - completedTasks;
+  const allTasksCompleted = completedTasks === totalTasks;
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'critical':
@@ -132,6 +138,11 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     );
   };
 
+  const handleCompleteHandover = () => {
+    // In real app, this would trigger handover completion logic
+    alert('🎉 Handover completed successfully! All knowledge has been transferred.');
+  };
+
   // Show document upload screen only for first-time users (who haven't uploaded before)
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -185,6 +196,18 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
               <span>{completedTasks} of {totalTasks} tasks completed</span>
               <span>{remainingTasks} remaining</span>
             </div>
+
+            {allTasksCompleted && (
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <Button 
+                  onClick={handleCompleteHandover}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3"
+                  size="lg"
+                >
+                  🎉 Complete Handover
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -217,7 +240,10 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                       </div>
                       
                       <p className="text-gray-600 text-sm mb-3">{task.description}</p>
-                      <p className="text-xs text-gray-500 mb-3">Category: {task.category}</p>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs text-gray-500">Category: {task.category}</p>
+                        <p className="text-xs text-gray-500 font-medium">Due: {task.deadline}</p>
+                      </div>
                       
                       {task.notes && <div className="bg-green-50 border border-green-200 rounded p-3 mb-3">
                           <div className="flex items-center gap-2 mb-1">
