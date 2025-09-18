@@ -122,6 +122,16 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     console.log('Edit insight:', insight);
   };
 
+  const handleTaskToggle = (taskId: string) => {
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === taskId 
+          ? { ...task, isCompleted: !task.isCompleted }
+          : task
+      )
+    );
+  };
+
   // Show document upload screen only for first-time users (who haven't uploaded before)
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -188,7 +198,12 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
               {tasks.map(task => <div key={task.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 mt-1">
-                      <CheckCircle className={`h-5 w-5 ${task.isCompleted ? 'text-blue-600' : 'text-gray-300'}`} />
+                      <button
+                        onClick={() => handleTaskToggle(task.id)}
+                        className="transition-colors hover:scale-110 transform transition-transform duration-200"
+                      >
+                        <CheckCircle className={`h-5 w-5 ${task.isCompleted ? 'text-blue-600' : 'text-gray-300 hover:text-gray-400'}`} />
+                      </button>
                     </div>
                     
                     <div className="flex-1 min-w-0">
