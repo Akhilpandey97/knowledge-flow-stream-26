@@ -10,44 +10,11 @@ import {
   AlertTriangle, 
   TrendingUp, 
   Calendar,
-  FileDown,
   Eye,
   MessageSquare
 } from 'lucide-react';
-import { DepartmentProgress } from '@/types/handover';
-import { DepartmentDetailModal } from './DepartmentDetailModal';
 import { ExportButton } from '@/components/ui/export-button';
-
-const mockDepartmentData: DepartmentProgress[] = [
-  {
-    department: 'Sales',
-    progress: 68,
-    totalHandovers: 3,
-    completedHandovers: 1,
-    criticalIssues: 2
-  },
-  {
-    department: 'Marketing',
-    progress: 100,
-    totalHandovers: 1,
-    completedHandovers: 1,
-    criticalIssues: 0
-  },
-  {
-    department: 'Engineering',
-    progress: 45,
-    totalHandovers: 2,
-    completedHandovers: 0,
-    criticalIssues: 1
-  },
-  {
-    department: 'Finance',
-    progress: 85,
-    totalHandovers: 1,
-    completedHandovers: 0,
-    criticalIssues: 0
-  }
-];
+import { ManageHandovers } from './ManageHandovers';
 
 const mockActiveHandovers = [
   {
@@ -86,11 +53,18 @@ const mockActiveHandovers = [
 ];
 
 export const HRManagerDashboard: React.FC = () => {
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
-  const totalHandovers = mockDepartmentData.reduce((sum, dept) => sum + dept.totalHandovers, 0);
-  const completedHandovers = mockDepartmentData.reduce((sum, dept) => sum + dept.completedHandovers, 0);
-  const totalCriticalIssues = mockDepartmentData.reduce((sum, dept) => sum + dept.criticalIssues, 0);
-  const overallProgress = Math.round(mockDepartmentData.reduce((sum, dept) => sum + dept.progress, 0) / mockDepartmentData.length);
+  const [showManageHandovers, setShowManageHandovers] = useState(false);
+  
+  // Calculate stats from active handovers
+  const totalHandovers = mockActiveHandovers.length;
+  const completedHandovers = mockActiveHandovers.filter(h => h.status === 'review' || h.status === 'completed').length;
+  const totalCriticalIssues = mockActiveHandovers.reduce((sum, handover) => sum + handover.criticalGaps, 0);
+  const overallProgress = Math.round(mockActiveHandovers.reduce((sum, handover) => sum + handover.progress, 0) / mockActiveHandovers.length);
+
+  // If showing manage handovers interface, render that instead
+  if (showManageHandovers) {
+    return <ManageHandovers onBack={() => setShowManageHandovers(false)} />;
+  }
 
   const getProgressVariant = (progress: number) => {
     if (progress >= 80) return 'success';
@@ -119,7 +93,7 @@ export const HRManagerDashboard: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <ExportButton title="Export Report" />
-          <Button>
+          <Button onClick={() => setShowManageHandovers(true)}>
             <Users className="w-4 h-4 mr-2" />
             Manage Handovers
           </Button>
@@ -202,50 +176,6 @@ export const HRManagerDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Department Progress */}
-      <Card className="shadow-medium">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            Department Progress Overview
-          </CardTitle>
-          <CardDescription>Track handover completion across all departments</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {mockDepartmentData.map((dept) => (
-              <div 
-                key={dept.department} 
-                className="space-y-3 cursor-pointer hover:bg-muted/50 p-3 rounded-lg transition-colors"
-                onClick={() => setSelectedDepartment(dept.department)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <h4 className="font-medium">{dept.department}</h4>
-                    {dept.criticalIssues > 0 && (
-                      <Badge variant="destructive" className="text-xs">
-                        {dept.criticalIssues} critical
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold">{dept.progress}%</div>
-                    <div className="text-xs text-muted-foreground">
-                      {dept.completedHandovers}/{dept.totalHandovers} completed
-                    </div>
-                  </div>
-                </div>
-                <Progress 
-                  value={dept.progress} 
-                  variant={getProgressVariant(dept.progress)}
-                  className="h-2"
-                />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Active Handovers */}
       <Card className="shadow-medium">
         <CardHeader>
@@ -316,13 +246,6 @@ export const HRManagerDashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Department Detail Modal */}
-      <DepartmentDetailModal
-        isOpen={!!selectedDepartment}
-        onClose={() => setSelectedDepartment(null)}
-        department={selectedDepartment || ''}
-      />
     </div>
   );
 };
