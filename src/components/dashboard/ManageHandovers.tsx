@@ -260,136 +260,32 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary-soft rounded-lg">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{handovers.length}</div>
-                <div className="text-sm text-muted-foreground">Total Handovers</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-success-soft rounded-lg">
-                <Users className="h-6 w-6 text-success" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{handovers.filter(h => h.status === 'in-progress').length}</div>
-                <div className="text-sm text-muted-foreground">In Progress</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-warning-soft rounded-lg">
-                <Users className="h-6 w-6 text-warning" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{handovers.filter(h => h.successor === 'Not Assigned').length}</div>
-                <div className="text-sm text-muted-foreground">Unassigned</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-critical-soft rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-critical" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{handovers.reduce((sum, h) => sum + h.criticalGaps, 0)}</div>
-                <div className="text-sm text-muted-foreground">Critical Issues</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Handovers List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            All Handovers
-          </CardTitle>
-          <CardDescription>View and manage all knowledge transfer processes</CardDescription>
+      {/* Welcome Message */}
+      <Card className="shadow-medium border-primary/20 bg-gradient-to-r from-primary-soft to-primary-soft/50">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Employee Transition Management</CardTitle>
+          <CardDescription className="text-lg">
+            Create and manage seamless knowledge transfers between employees
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {handovers.map((handover) => (
-              <div key={handover.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h4 className="font-medium">{handover.exitingEmployee} → {handover.successor}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {handover.position} • {handover.department}
-                    </p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <Badge variant={getStatusColor(handover.status) as any} className="text-xs">
-                      {handover.status.replace('-', ' ')}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground">
-                      Due {new Date(handover.dueDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Progress</span>
-                    <span className="font-medium">{handover.progress}%</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full transition-all ${
-                        getProgressVariant(handover.progress) === 'success' ? 'bg-success' :
-                        getProgressVariant(handover.progress) === 'warning' ? 'bg-warning' : 'bg-critical'
-                      }`}
-                      style={{ width: `${handover.progress}%` }}
-                    />
-                  </div>
-                </div>
-
-                {handover.criticalGaps > 0 && (
-                  <Alert className="border-critical/20 bg-critical-soft py-2">
-                    <AlertTriangle className="h-3 w-3" />
-                    <AlertDescription className="text-xs">
-                      {handover.criticalGaps} critical gap{handover.criticalGaps > 1 ? 's' : ''} identified
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm">
-                    <Eye className="w-3 h-3 mr-1" />
-                    View Details
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Edit className="w-3 h-3 mr-1" />
-                    Edit Handover
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    Schedule Review
-                  </Button>
-                </div>
-              </div>
-            ))}
+        <CardContent className="text-center">
+          <p className="text-muted-foreground mb-6">
+            Use the tools above to set up new handover processes, add departing employees to the system, 
+            or register new successors for knowledge transfer.
+          </p>
+          <div className="flex justify-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-primary"></div>
+              <span>Create structured handover processes</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-success"></div>
+              <span>Track knowledge transfer progress</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-warning"></div>
+              <span>Ensure seamless transitions</span>
+            </div>
           </div>
         </CardContent>
       </Card>
