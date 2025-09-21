@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, 
   Plus, 
-  Eye, 
-  Edit, 
-  AlertTriangle,
-  Calendar,
-  ArrowLeft
+  ArrowLeft,
+  UserPlus
 } from 'lucide-react';
 
 interface HandoverRecord {
@@ -86,12 +84,23 @@ const departments = ['Sales', 'Engineering', 'Finance', 'Marketing', 'HR', 'Oper
 export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
   const [handovers, setHandovers] = useState<HandoverRecord[]>(mockHandovers);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAddExitingModalOpen, setIsAddExitingModalOpen] = useState(false);
+  const [isAddSuccessorModalOpen, setIsAddSuccessorModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  
   const [formData, setFormData] = useState({
     exitingEmployee: '',
     successor: '',
     department: '',
     position: '',
     dueDate: ''
+  });
+
+  const [newUserData, setNewUserData] = useState({
+    email: '',
+    role: '',
+    department: ''
   });
 
   const getStatusColor = (status: string) => {
@@ -141,6 +150,71 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
     });
   };
 
+  const handleAddUser = async (role: 'exiting' | 'successor') => {
+    if (!newUserData.email || !newUserData.role || !newUserData.department) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create user in the users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .insert({
+          email: newUserData.email,
+          role: newUserData.role,
+        })
+        .select()
+        .single();
+
+      if (userError) throw userError;
+
+      // Send signup email
+      const { error: emailError } = await supabase.functions.invoke('send-signup-email', {
+        body: {
+          email: newUserData.email,
+          role: newUserData.role,
+          department: newUserData.department,
+        },
+      });
+
+      if (emailError) {
+        console.error('Error sending email:', emailError);
+        toast({
+          title: "User Created",
+          description: "User created successfully, but there was an issue sending the signup email.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `${role === 'exiting' ? 'Exiting employee' : 'Successor'} added successfully! Signup email sent.`,
+        });
+      }
+
+      // Reset form and close modal
+      setNewUserData({ email: '', role: '', department: '' });
+      if (role === 'exiting') {
+        setIsAddExitingModalOpen(false);
+      } else {
+        setIsAddSuccessorModalOpen(false);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add user",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredSuccessors = mockEmployees.filter(emp => 
     emp.id !== formData.exitingEmployee && 
     (formData.department === '' || emp.department === formData.department)
@@ -149,15 +223,16 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
+      <div className="flex items-center justify-between gap-4">
+        <Button variant="outline" onClick={onBack} className="flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </Button>
-        <div className="flex-1 flex items-center gap-4">
+        
+        <div className="flex items-center gap-3">
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="bg-primary hover:bg-primary/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Handover
               </Button>
@@ -249,14 +324,146 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
               </div>
             </DialogContent>
           </Dialog>
-          <Button variant="outline">
-            <Users className="w-4 h-4 mr-2" />
-            Add Exiting Employee
-          </Button>
-          <Button variant="outline">
-            <Users className="w-4 h-4 mr-2" />
-            Add Successor
-          </Button>
+
+          <Dialog open={isAddExitingModalOpen} onOpenChange={setIsAddExitingModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                Add Exiting Employee
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add Exiting Employee</DialogTitle>
+                <DialogDescription>
+                  Add a new exiting employee to the system and send them a signup email
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="exitingEmail">Email Address</Label>
+                  <Input
+                    id="exitingEmail"
+                    type="email"
+                    value={newUserData.email}
+                    onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+                    placeholder="employee@company.com"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="exitingRole">Role</Label>
+                  <Select value={newUserData.role} onValueChange={(value) => setNewUserData({...newUserData, role: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="exiting">Exiting Employee</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="exitingDepartment">Department</Label>
+                  <Select value={newUserData.department} onValueChange={(value) => setNewUserData({...newUserData, department: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    onClick={() => handleAddUser('exiting')} 
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    {loading ? 'Adding...' : 'Add Employee & Send Email'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsAddExitingModalOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAddSuccessorModalOpen} onOpenChange={setIsAddSuccessorModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                Add Successor
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add Successor</DialogTitle>
+                <DialogDescription>
+                  Add a new successor to the system and send them a signup email
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="successorEmail">Email Address</Label>
+                  <Input
+                    id="successorEmail"
+                    type="email"
+                    value={newUserData.email}
+                    onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+                    placeholder="successor@company.com"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="successorRole">Role</Label>
+                  <Select value={newUserData.role} onValueChange={(value) => setNewUserData({...newUserData, role: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="successor">Successor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="successorDepartment">Department</Label>
+                  <Select value={newUserData.department} onValueChange={(value) => setNewUserData({...newUserData, department: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    onClick={() => handleAddUser('successor')} 
+                    className="flex-1"
+                    disabled={loading}
+                  >
+                    {loading ? 'Adding...' : 'Add Successor & Send Email'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsAddSuccessorModalOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
