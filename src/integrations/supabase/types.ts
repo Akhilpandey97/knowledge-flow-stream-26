@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          resource_id: string | null
+          resource_type: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_knowledge_insights_complex: {
         Row: {
           created_at: string | null
@@ -82,6 +118,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      integrations: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          integration_name: string
+          integration_type: string
+          metadata: Json | null
+          refresh_token: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          integration_name: string
+          integration_type: string
+          metadata?: Json | null
+          refresh_token?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          integration_name?: string
+          integration_type?: string
+          metadata?: Json | null
+          refresh_token?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       lindi_responses: {
         Row: {
@@ -291,6 +369,18 @@ export type Database = {
           id: string
           role: string
         }[]
+      }
+      log_activity: {
+        Args: {
+          p_action?: string
+          p_details?: Json
+          p_ip_address?: unknown
+          p_resource_id?: string
+          p_resource_type?: string
+          p_user_agent?: string
+          p_user_id?: string
+        }
+        Returns: string
       }
     }
     Enums: {
