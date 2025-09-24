@@ -105,8 +105,13 @@ export const useIntegrations = () => {
 
       if (response.error) throw response.error;
 
-      // If the response contains an auth URL, redirect user
-      if (response.data?.authUrl) {
+      // If the response contains an auth URL and requires redirect, redirect user
+      if (response.data?.requiresRedirect && response.data?.authUrl) {
+        // For OAuth integrations that require full page redirect
+        window.location.href = response.data.authUrl;
+        return;
+      } else if (response.data?.authUrl) {
+        // For popup-based OAuth
         window.open(response.data.authUrl, '_blank', 'width=600,height=600');
         
         toast({
