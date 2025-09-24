@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
+import { useIntegrations } from '@/hooks/useIntegrations';
 
 interface Integration {
   id: string;
@@ -77,16 +78,9 @@ const integrations: Integration[] = [
 
 export const IntegrationsPanel: React.FC = () => {
   const { toast } = useToast();
+  const { connectIntegration, disconnectIntegration, getIntegrationStatus, loading } = useIntegrations();
 
-  const handleConnect = (integration: Integration) => {
-    if (integration.status === 'connected') {
-      toast({
-        title: 'Already Connected',
-        description: `${integration.name} is already connected to your account.`,
-      });
-      return;
-    }
-    
+  const handleConnect = async (integration: Integration) => {
     if (integration.status === 'coming-soon') {
       toast({
         title: 'Coming Soon',
@@ -95,21 +89,33 @@ export const IntegrationsPanel: React.FC = () => {
       return;
     }
 
-    // Mock connection process
-    toast({
-      title: 'Connecting...',
-      description: `Redirecting to ${integration.name} authorization...`,
-    });
+    const currentStatus = getIntegrationStatus(integration.id);
+    
+    if (currentStatus === 'connected') {
+      toast({
+        title: 'Already Connected',
+        description: `${integration.name} is already connected to your account.`,
+      });
+      return;
+    }
+
+    await connectIntegration(integration.id, integration.name);
   };
 
-  const getStatusBadge = (status: Integration['status']) => {
-    switch (status) {
+  const getStatusBadge = (integration: Integration) => {
+    const currentStatus = getIntegrationStatus(integration.id);
+    
+    if (integration.status === 'coming-soon') {
+      return <Badge variant="secondary" className="text-xs">Coming Soon</Badge>;
+    }
+    
+    switch (currentStatus) {
       case 'connected':
         return <Badge variant="secondary" className="text-success bg-success-soft border-success text-xs">Connected</Badge>;
-      case 'available':
+      case 'connecting':
+        return <Badge variant="outline" className="text-warning text-xs">Connecting...</Badge>;
+      default:
         return <Badge variant="outline" className="text-xs">Available</Badge>;
-      case 'coming-soon':
-        return <Badge variant="secondary" className="text-xs">Coming Soon</Badge>;
     }
   };
 
@@ -151,7 +157,7 @@ export const IntegrationsPanel: React.FC = () => {
                       <h4 className="font-medium text-sm">{integration.name}</h4>
                     </div>
                   </div>
-                  {getStatusBadge(integration.status)}
+                  {getStatusBadge(integration)}
                 </div>
                 
                 <p className="text-xs text-muted-foreground mb-3">
@@ -159,14 +165,15 @@ export const IntegrationsPanel: React.FC = () => {
                 </p>
                 
                 <Button
-                  variant={integration.status === 'connected' ? 'outline' : 'default'}
+                  variant={getIntegrationStatus(integration.id) === 'connected' ? 'outline' : 'default'}
                   size="sm"
                   onClick={() => handleConnect(integration)}
                   className="w-full"
-                  disabled={integration.status === 'coming-soon'}
+                  disabled={integration.status === 'coming-soon' || loading}
                 >
-                  {integration.status === 'connected' && 'Manage'}
-                  {integration.status === 'available' && 'Connect'}
+                  {getIntegrationStatus(integration.id) === 'connected' && 'Manage'}
+                  {getIntegrationStatus(integration.id) === 'connecting' && 'Connecting...'}
+                  {getIntegrationStatus(integration.id) === 'disconnected' && integration.status === 'available' && 'Connect'}
                   {integration.status === 'coming-soon' && 'Coming Soon'}
                 </Button>
               </motion.div>

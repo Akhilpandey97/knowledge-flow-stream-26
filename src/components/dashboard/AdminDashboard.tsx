@@ -9,6 +9,7 @@ import { UserManagement } from '@/components/admin/UserManagement';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { IntegrationsManager } from '@/components/admin/IntegrationsManager';
 import { HandoverAuthSyncManager } from '@/components/admin/HandoverAuthSyncManager';
+import { ActivityLog } from '@/components/admin/ActivityLog';
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
@@ -119,19 +120,7 @@ export const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Activity Log</CardTitle>
-              <CardDescription>
-                Recent system activities and user actions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Activity logging will be implemented in a future update
-              </div>
-            </CardContent>
-          </Card>
+          <ActivityLog />
         </TabsContent>
       </Tabs>
     </div>
