@@ -93,7 +93,16 @@ export const useHandover = () => {
       }
 
       if (handovers && handovers.length > 0) {
-        const handover = handovers[0];
+        // Select the most recent handover that has tasks, or the most recent one if none have tasks
+        const handoverWithTasks = handovers
+          .filter(h => h.tasks && h.tasks.length > 0)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+        
+        const handover = handoverWithTasks || handovers
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+        
+        console.log('Selected handover:', handover.id, 'with', handover.tasks?.length || 0, 'tasks');
+        
         let mappedTasks: HandoverTask[] = handover.tasks?.map((task: any) => ({
           id: task.id,
           title: task.title,
