@@ -63,43 +63,71 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
     
     setIsLoading(true);
     
-    // First try to get department-specific template, then fallback to general
-    let { data: template } = await supabase
-      .from('insight_form_templates')
-      .select('*')
-      .eq('is_active', true)
-      .eq('department', task.category) // Assuming task.category maps to department
-      .single();
+    try {
+      // First, get the current user's department
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('department')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
 
-    if (!template) {
-      // Fallback to general template
-      const { data: generalTemplate } = await supabase
+      if (userError) {
+        console.error('Error fetching user department:', userError);
+        setFormTemplate(null);
+        setFormFields([]);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('User department:', userData?.department);
+
+      // Try to get department-specific template with case-insensitive matching
+      let { data: template, error: templateError } = await supabase
         .from('insight_form_templates')
         .select('*')
         .eq('is_active', true)
-        .is('department', null)
+        .ilike('department', userData?.department || '')
         .single();
-      template = generalTemplate;
-    }
 
-    if (template) {
-      setFormTemplate(template);
-      
-      // Fetch form fields
-      const { data: fields } = await supabase
-        .from('insight_form_fields')
-        .select('*')
-        .eq('template_id', template.id)
-        .order('order_index');
-      
-      setFormFields((fields || []).map(field => ({
-        ...field,
-        field_type: field.field_type as 'text' | 'textarea' | 'select' | 'file' | 'checkbox' | 'radio',
-        field_options: Array.isArray(field.field_options) ? field.field_options.map(String) : [],
-        validation_rules: typeof field.validation_rules === 'object' ? field.validation_rules : {}
-      })));
-    } else {
-      // Use default form if no template found
+      console.log('Found template:', template);
+
+      if (!template || templateError) {
+        // Fallback to general template (no department specified)
+        const { data: generalTemplate, error: generalError } = await supabase
+          .from('insight_form_templates')
+          .select('*')
+          .eq('is_active', true)
+          .is('department', null)
+          .single();
+        
+      console.log('Fallback to general template:', generalTemplate);
+        template = generalTemplate;
+      }
+
+      if (template) {
+        setFormTemplate(template);
+        
+        // Fetch form fields
+        const { data: fields } = await supabase
+          .from('insight_form_fields')
+          .select('*')
+          .eq('template_id', template.id)
+          .order('order_index');
+        
+        setFormFields((fields || []).map(field => ({
+          ...field,
+          field_type: field.field_type as 'text' | 'textarea' | 'select' | 'file' | 'checkbox' | 'radio',
+          field_options: Array.isArray(field.field_options) ? field.field_options.map(String) : [],
+          validation_rules: typeof field.validation_rules === 'object' ? field.validation_rules : {}
+        })));
+      } else {
+        // Use default form if no template found
+        console.log('No template found, using default form');
+        setFormTemplate(null);
+        setFormFields([]);
+      }
+    } catch (error) {
+      console.error('Error fetching form template:', error);
       setFormTemplate(null);
       setFormFields([]);
     }
