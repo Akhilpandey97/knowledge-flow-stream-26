@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,81 +20,77 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Create Supabase admin client using service role key
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? '',
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? '',
+      {
+        auth: { autoRefreshToken: false, persistSession: false }
+      }
+    );
+
     const { email, role, department }: SignupEmailRequest = await req.json();
 
-    console.log("Sending signup email to:", email, "with role:", role);
-
-    const signupUrl = `${Deno.env.get("SUPABASE_URL")}/auth/v1/verify?type=signup&token_hash=placeholder&redirect_to=${encodeURIComponent("https://leplvqapnexpgmivfdpl.supabase.co")}&email=${encodeURIComponent(email)}`;
+    console.log("Sending signup invite to:", email, "with role:", role);
 
     const roleTitle = role === 'exiting' ? 'Exiting Employee' : 
                      role === 'successor' ? 'Successor' : 
                      'Employee';
 
-    const emailResponse = await resend.emails.send({
-      from: "Knowledge Transfer System <onboarding@resend.dev>",
-      to: [email],
-      subject: `Welcome to the Knowledge Transfer System - ${roleTitle}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2563eb; text-align: center;">Welcome to Knowledge Transfer System</h1>
-          
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h2 style="color: #334155; margin-top: 0;">Account Created Successfully!</h2>
-            <p style="color: #64748b; line-height: 1.6;">
-              Your account has been created with the following details:
-            </p>
-            <ul style="color: #64748b; line-height: 1.8;">
-              <li><strong>Email:</strong> ${email}</li>
-              <li><strong>Role:</strong> ${roleTitle}</li>
-              <li><strong>Department:</strong> ${department}</li>
-            </ul>
-          </div>
+    // Use Supabase Admin API to send real invite email
+    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      email,
+      {
+        data: {
+          role: role,
+          department: department
+        },
+        redirectTo: `${Deno.env.get("SUPABASE_URL")?.replace('supabase.co', 'supabase.co')}/auth/callback`
+      }
+    );
 
-          <div style="background-color: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #1e40af; margin-top: 0;">Next Steps</h3>
-            <p style="color: #1e3a8a; line-height: 1.6;">
-              To complete your account setup and access the Knowledge Transfer System:
-            </p>
-            <ol style="color: #1e3a8a; line-height: 1.8;">
-              <li>Check your email for a verification link from Supabase</li>
-              <li>Click the verification link to activate your account</li>
-              <li>Set up your password when prompted</li>
-              <li>Login to the Knowledge Transfer System</li>
-            </ol>
-          </div>
+    if (inviteError) {
+      console.error("Error sending invite:", inviteError);
+      throw inviteError;
+    }
 
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${signupUrl}" 
-               style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-              Complete Account Setup
-            </a>
-          </div>
+    console.log("Invite sent successfully:", inviteData);
 
-          <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px;">
-            <p style="color: #64748b; font-size: 14px; text-align: center;">
-              If you have any questions or need assistance, please contact your system administrator.
-            </p>
-            <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 20px;">
-              This email was sent by the Knowledge Transfer System. Please do not reply to this email.
-            </p>
-          </div>
-        </div>
-      `,
-    });
+    // Ensure user record exists in users table with correct Auth ID
+    if (inviteData.user) {
+      const { error: userInsertError } = await supabaseAdmin
+        .from('users')
+        .upsert({
+          id: inviteData.user.id, // Use the Auth user ID
+          email: email,
+          role: role,
+          department: department
+        }, {
+          onConflict: 'id'
+        });
 
-    console.log("Email sent successfully:", emailResponse);
+      if (userInsertError) {
+        console.error("Error creating user profile:", userInsertError);
+        // Don't throw here - the invite was successful, just log the profile error
+      }
+    }
 
-    return new Response(JSON.stringify(emailResponse), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: `Signup invite sent successfully to ${email}`,
+      user: inviteData 
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
         ...corsHeaders,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-signup-email function:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

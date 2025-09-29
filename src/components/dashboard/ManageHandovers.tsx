@@ -187,20 +187,7 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
 
     setLoading(true);
     try {
-      // Create user in the users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .insert({
-          email: newUserData.email,
-          role: newUserData.role,
-          department: newUserData.department  // Add department field
-        })
-        .select()
-        .single();
-
-      if (userError) throw userError;
-
-      // Send signup email
+      // Send signup email - this will now also create the user record with proper Auth ID
       const { error: emailError } = await supabase.functions.invoke('send-signup-email', {
         body: {
           email: newUserData.email,
@@ -210,16 +197,16 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
       });
 
       if (emailError) {
-        console.error('Error sending email:', emailError);
+        console.error('Error sending invite:', emailError);
         toast({
-          title: "User Created",
-          description: "User created successfully, but there was an issue sending the signup email.",
+          title: "Error",
+          description: "Failed to send signup invitation. Please try again.",
           variant: "destructive",
         });
       } else {
         toast({
           title: "Success",
-          description: `${role === 'exiting' ? 'Exiting employee' : 'Successor'} added successfully! Signup email sent.`,
+          description: `${role === 'exiting' ? 'Exiting employee' : 'Successor'} invited successfully! They will receive a signup email.`,
         });
       }
 
@@ -233,10 +220,11 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
       
       // Refresh users list
       refetchUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Error",
-        description: error.message || "Failed to add user",
+        description: errorMessage || "Failed to add user",
         variant: "destructive",
       });
     } finally {
