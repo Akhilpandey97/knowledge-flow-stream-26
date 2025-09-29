@@ -1,75 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { CheckCircle, Target, Plus, Edit3, Video, LogOut, User, Users, UserCheck } from 'lucide-react';
+import { CheckCircle, Target, Plus, Edit3, Video, Loader2 } from 'lucide-react';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 import { InsightCollectionModal } from './InsightCollectionModal';
 import { ZoomMeetingModal } from './ZoomMeetingModal';
 import { ShowInsightsModal } from './ShowInsightsModal';
 import { useDocumentUpload } from '@/hooks/useDocumentUpload';
-interface HandoverTask {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  isCompleted: boolean;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  deadline: string;
-  notes?: string;
-}
+import { useHandover } from '@/hooks/useHandover';
+import { HandoverTask } from '@/types/handover';
+
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
-  const { hasUploadedDocument, loading, markDocumentUploaded } = useDocumentUpload();
-  const [activeTab, setActiveTab] = useState('exiting');
-  const [demoMode, setDemoMode] = useState(true);
+  const { hasUploadedDocument, loading: uploadLoading, markDocumentUploaded } = useDocumentUpload();
+  const { tasks, loading: handoverLoading, error, updateTask, createHandoverWithTemplate } = useHandover();
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [isShowInsightsModalOpen, setIsShowInsightsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
 
-  // Sample handover tasks data
-  const [tasks, setTasks] = useState<HandoverTask[]>([{
-    id: '1',
-    title: 'Client Account Handover - TechCorp',
-    description: 'Transfer all TechCorp account details, meeting notes, and contact information',
-    category: 'Client Management',
-    isCompleted: true,
-    priority: 'critical',
-    deadline: 'Jan 10, 2024',
-    notes: 'Completed meeting with Sarah. All files transferred.'
-  }, {
-    id: '2',
-    title: 'Project Documentation - Mobile App',
-    description: 'Document current project status and next steps',
-    category: 'Project Management',
-    isCompleted: false,
-    priority: 'high',
-    deadline: 'Jan 12, 2024'
-  }, {
-    id: '3',
-    title: 'Team Introductions',
-    description: 'Introduce successor to key team members and stakeholders',
-    category: 'Team Management',
-    isCompleted: false,
-    priority: 'medium',
-    deadline: 'Jan 14, 2024'
-  }, {
-    id: '4',
-    title: 'System Access & Credentials',
-    description: 'Transfer system access and document credentials',
-    category: 'System Management',
-    isCompleted: true,
-    priority: 'critical',
-    deadline: 'Jan 8, 2024'
-  }]);
-  const completedTasks = tasks.filter(task => task.isCompleted).length;
+  // Create handover with template on first load if no tasks exist
+  useEffect(() => {
+    if (!handoverLoading && tasks.length === 0 && hasUploadedDocument) {
+      createHandoverWithTemplate();
+    }
+  }, [handoverLoading, tasks.length, hasUploadedDocument, createHandoverWithTemplate]);
+
+  const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const totalTasks = tasks.length;
-  const progressPercentage = Math.round(completedTasks / totalTasks * 100);
+  const progressPercentage = totalTasks > 0 ? Math.round(completedTasks / totalTasks * 100) : 0;
   const remainingTasks = totalTasks - completedTasks;
-  const allTasksCompleted = completedTasks === totalTasks;
+  const allTasksCompleted = totalTasks > 0 && completedTasks === totalTasks;
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'critical':
@@ -100,27 +64,24 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     setIsShowInsightsModalOpen(true);
   };
 
-  const handleSaveInsights = (taskId: string, topic: string, insights: string, file?: File) => {
-    // Update the task with insights and mark as completed
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === taskId 
-          ? { 
-              ...task, 
-              isCompleted: true, 
-              notes: `${topic}: ${insights}` 
-            }
-          : task
-      )
-    );
-    
-    // Log the file if provided (in real app, upload to server)
-    if (file) {
-      console.log('File would be uploaded:', file.name);
+  const handleSaveInsights = async (taskId: string, topic: string, insights: string, file?: File) => {
+    try {
+      const notesContent = `${topic}: ${insights}`;
+      await updateTask(taskId, { 
+        status: 'completed',
+        notes: notesContent
+      });
+      
+      // Log the file if provided (in real app, upload to server)
+      if (file) {
+        console.log('File would be uploaded:', file.name);
+      }
+      
+      setIsInsightModalOpen(false);
+      setSelectedTask(null);
+    } catch (error) {
+      console.error('Error saving insights:', error);
     }
-    
-    setIsInsightModalOpen(false);
-    setSelectedTask(null);
   };
 
   const handleEditInsight = (insight: any) => {
@@ -128,14 +89,16 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     console.log('Edit insight:', insight);
   };
 
-  const handleTaskToggle = (taskId: string) => {
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === taskId 
-          ? { ...task, isCompleted: !task.isCompleted }
-          : task
-      )
-    );
+  const handleTaskToggle = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+    try {
+      await updateTask(taskId, { status: newStatus });
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
   };
 
   const handleCompleteHandover = () => {
@@ -143,65 +106,79 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     alert('🎉 Handover completed successfully! All knowledge has been transferred.');
   };
 
-  // Show document upload screen only for first-time users (who haven't uploaded before)
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  // Show loading state
+  if (uploadLoading || handoverLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading handover data</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
   }
   
+  // Show document upload screen only for first-time users (who haven't uploaded before)
   if (!hasUploadedDocument) {
     return <DocumentUploadScreen onUploadComplete={markDocumentUploaded} />;
   }
-  return <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      
 
-      {/* Navigation Tabs */}
-      
-
+  return (
+    <div className="min-h-screen bg-background">
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Knowledge Handover Header */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Knowledge Handover</h2>
-            <p className="text-lg text-gray-600">Transferring knowledge to <span className="font-semibold">Sarah Wilson</span></p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Knowledge Handover</h2>
+            <p className="text-base sm:text-lg text-muted-foreground">
+              Transferring knowledge for handover completion
+            </p>
           </div>
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <Target className="h-5 w-5" />
-            <span className="text-sm">Target completion: <span className="font-semibold">Jan 15, 2024</span></span>
+            <span className="text-sm">Target completion: <span className="font-semibold">Ongoing</span></span>
           </div>
         </div>
 
         {/* Handover Progress Card */}
         <Card className="mb-8">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-              <h3 className="text-xl font-bold text-gray-900">Handover Progress</h3>
+              <CheckCircle className="h-6 w-6 text-primary" />
+              <h3 className="text-lg sm:text-xl font-bold">Handover Progress</h3>
             </div>
-            <p className="text-gray-600 mb-6">Track your knowledge transfer completion</p>
+            <p className="text-muted-foreground mb-6">Track your knowledge transfer completion</p>
             
             <div className="flex items-center justify-between mb-4">
-              <span className="font-semibold text-gray-900">Overall Progress</span>
-              <span className="text-3xl font-bold text-blue-600">{progressPercentage}%</span>
+              <span className="font-semibold">Overall Progress</span>
+              <span className="text-2xl sm:text-3xl font-bold text-primary">{progressPercentage}%</span>
             </div>
             
             <div className="mb-4">
-              <Progress value={progressPercentage} className="h-3 bg-gray-200" style={{
-              "--progress-bar-color": "#f97316"
-            } as React.CSSProperties} />
+              <Progress value={progressPercentage} className="h-3" />
             </div>
             
-            <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>{completedTasks} of {totalTasks} tasks completed</span>
               <span>{remainingTasks} remaining</span>
             </div>
 
-            {allTasksCompleted && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
+            {allTasksCompleted && totalTasks > 0 && (
+              <div className="mt-6 pt-4 border-t">
                 <Button 
                   onClick={handleCompleteHandover}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3"
+                  className="w-full font-medium py-3"
                   size="lg"
                 >
                   🎉 Complete Handover
@@ -213,79 +190,94 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
 
         {/* Knowledge Transfer Checklist */}
         <Card>
-          <CardContent className="p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Knowledge Transfer Checklist</h3>
-            <p className="text-gray-600 mb-6">Complete these domain-specific tasks for a smooth handover</p>
+          <CardContent className="p-4 sm:p-6">
+            <h3 className="text-lg sm:text-xl font-bold mb-2">Knowledge Transfer Checklist</h3>
+            <p className="text-muted-foreground mb-6">Complete these domain-specific tasks for a smooth handover</p>
             
-            <div className="space-y-4">
-              {tasks.map(task => <div key={task.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 mt-1">
-                      <button
-                        onClick={() => handleTaskToggle(task.id)}
-                        className="transition-colors hover:scale-110 transform transition-transform duration-200"
-                      >
-                        <CheckCircle className={`h-5 w-5 ${task.isCompleted ? 'text-blue-600' : 'text-gray-300 hover:text-gray-400'}`} />
-                      </button>
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className={`font-medium ${task.isCompleted ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                          {task.title}
-                        </h4>
-                        <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
-                          {task.priority}
-                        </Badge>
+            {tasks.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No tasks available yet</p>
+                <Button onClick={() => createHandoverWithTemplate()}>
+                  Create Handover Tasks
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {tasks.map(task => (
+                  <div key={task.id} className="border rounded-lg p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 mt-1">
+                        <button
+                          onClick={() => handleTaskToggle(task.id)}
+                          className="transition-colors hover:scale-110 transform transition-transform duration-200"
+                        >
+                          <CheckCircle className={`h-5 w-5 ${task.status === 'completed' ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`} />
+                        </button>
                       </div>
                       
-                      <p className="text-gray-600 text-sm mb-3">{task.description}</p>
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs text-gray-500">Category: {task.category}</p>
-                        <p className="text-xs text-gray-500 font-medium">Due: {task.deadline}</p>
-                      </div>
-                      
-                      {task.notes && <div className="bg-green-50 border border-green-200 rounded p-3 mb-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            <span className="text-sm font-medium text-green-800">Notes Added</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <h4 className={`font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+                            {task.title}
+                          </h4>
+                          <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
+                            {task.priority}
+                          </Badge>
+                        </div>
+                        
+                        {task.description && (
+                          <p className="text-muted-foreground text-sm mb-3">{task.description}</p>
+                        )}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                          <p className="text-xs text-muted-foreground">Category: {task.category}</p>
+                          <p className="text-xs text-muted-foreground font-medium">Status: {task.status}</p>
+                        </div>
+                        
+                        {task.notes && (
+                          <div className="bg-muted/50 border rounded p-3 mb-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CheckCircle className="h-4 w-4 text-primary" />
+                              <span className="text-sm font-medium">Notes Added</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{task.notes}</p>
                           </div>
-                          <p className="text-sm text-green-700">{task.notes}</p>
-                        </div>}
-                      
-                      <div className="flex gap-3">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-xs"
-                          onClick={() => handleTaskClick(task)}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add Insights
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-xs"
-                          onClick={() => handleShowInsightsClick(task)}
-                        >
-                          <Edit3 className="h-3 w-3 mr-1" />
-                          Show Insights
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-xs"
-                          onClick={() => handleRecordVideoClick(task)}
-                        >
-                          <Video className="h-3 w-3 mr-1" />
-                          Meetings
-                        </Button>
+                        )}
+                        
+                        <div className="flex flex-wrap gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs"
+                            onClick={() => handleTaskClick(task)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Insights
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs"
+                            onClick={() => handleShowInsightsClick(task)}
+                          >
+                            <Edit3 className="h-3 w-3 mr-1" />
+                            Show Insights
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs"
+                            onClick={() => handleRecordVideoClick(task)}
+                          >
+                            <Video className="h-3 w-3 mr-1" />
+                            Meetings
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>)}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
@@ -313,5 +305,6 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         task={selectedTask}
         onEditInsight={handleEditInsight}
       />
-    </div>;
+    </div>
+  );
 };

@@ -1,9 +1,9 @@
 export interface HandoverTask {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   category: string;
-  isCompleted: boolean;
+  status: 'pending' | 'completed' | 'in-progress';
   priority: 'low' | 'medium' | 'high' | 'critical';
   dueDate?: string;
   notes?: string;

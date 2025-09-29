@@ -19,66 +19,57 @@ import { ChatModal } from './ChatModal';
 import { EscalationModal } from './EscalationModal';
 import { ExportButton } from '@/components/ui/export-button';
 import { SuccessorAIInsights } from './SuccessorAIInsights';
-
-const mockHandoverData = {
-  exitingEmployeeName: 'John Doe',
-  progress: 68,
-  targetDate: '2024-01-15',
-  department: 'Sales',
-  criticalGaps: [
-    'Client renewal strategies for Q1 2024',
-    'Custom CRM automation rules',
-    'Stakeholder contact preferences'
-  ],
-  completedTasks: [
-    {
-      id: '1',
-      title: 'Client Account Handover - TechCorp',
-      category: 'Client Management',
-      hasNotes: true,
-      hasVideo: false,
-      completedDate: '2024-01-05'
-    },
-    {
-      id: '2',
-      title: 'CRM Workflow Documentation',
-      category: 'Systems & Tools',
-      hasNotes: true,
-      hasVideo: true,
-      completedDate: '2024-01-04'
-    }
-  ],
-  pendingTasks: [
-    {
-      id: '3',
-      title: 'Renewal Risk Assessment',
-      category: 'Strategic Planning',
-      priority: 'critical',
-      dueDate: '2024-01-10'
-    },
-    {
-      id: '4',
-      title: 'Team Introduction Sessions',
-      category: 'Relationships',
-      priority: 'medium',
-      dueDate: '2024-01-12'
-    }
-  ]
-};
+import { useHandover } from '@/hooks/useHandover';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const SuccessorDashboard: React.FC = () => {
+  const { tasks, loading, error } = useHandover();
+  const { user } = useAuth();
   const [chatModal, setChatModal] = useState(false);
   const [escalationModal, setEscalationModal] = useState(false);
-  const daysUntilTarget = Math.ceil((new Date('2024-01-15').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+  // Calculate metrics from real data
+  const completedTasks = tasks.filter(task => task.status === 'completed');
+  const pendingTasks = tasks.filter(task => task.status === 'pending');
+  const totalTasks = tasks.length;
+  const progressPercentage = totalTasks > 0 ? Math.round(completedTasks.length / totalTasks * 100) : 0;
+
+  // Mock critical gaps - in real app, this would be calculated from AI analysis
+  const criticalGaps = pendingTasks
+    .filter(task => task.priority === 'critical')
+    .slice(0, 3)
+    .map(task => task.title);
+
+  const daysUntilTarget = 10; // Mock value, in real app calculate from handover data
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading handover data...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading handover data</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">Incoming Handover</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Incoming Handover</h2>
           <p className="text-muted-foreground">
-            Knowledge transfer from <span className="font-medium text-foreground">{mockHandoverData.exitingEmployeeName}</span>
+            Knowledge transfer from your predecessor
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm">
@@ -97,26 +88,26 @@ export const SuccessorDashboard: React.FC = () => {
             <CheckCircle className="h-5 w-5 text-primary" />
             Handover Progress
           </CardTitle>
-          <CardDescription>Track the knowledge transfer from {mockHandoverData.exitingEmployeeName}</CardDescription>
+          <CardDescription>Track the knowledge transfer progress</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Transfer Progress</span>
-              <span className="text-2xl font-bold text-primary">{mockHandoverData.progress}%</span>
+              <span className="text-2xl font-bold text-primary">{progressPercentage}%</span>
             </div>
             <Progress 
-              value={mockHandoverData.progress} 
-              variant={mockHandoverData.progress >= 80 ? 'success' : mockHandoverData.progress >= 50 ? 'warning' : 'critical'}
+              value={progressPercentage} 
+              variant={progressPercentage >= 80 ? 'success' : progressPercentage >= 50 ? 'warning' : 'critical'}
               className="h-3"
             />
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="text-center">
-                <div className="text-2xl font-bold text-success">{mockHandoverData.completedTasks.length}</div>
+                <div className="text-2xl font-bold text-success">{completedTasks.length}</div>
                 <div className="text-muted-foreground">Completed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-warning">{mockHandoverData.pendingTasks.length}</div>
+                <div className="text-2xl font-bold text-warning">{pendingTasks.length}</div>
                 <div className="text-muted-foreground">Pending</div>
               </div>
             </div>
@@ -128,14 +119,14 @@ export const SuccessorDashboard: React.FC = () => {
       <SuccessorAIInsights />
 
       {/* Critical Missing Items Alert */}
-      {mockHandoverData.criticalGaps.length > 0 && (
+      {criticalGaps.length > 0 && (
         <Alert variant="destructive" className="border-critical/20 bg-critical-soft">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             <div className="space-y-2">
               <div className="font-medium">Critical Missing Items Identified:</div>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                {mockHandoverData.criticalGaps.map((gap, index) => (
+                {criticalGaps.map((gap, index) => (
                   <li key={index}>{gap}</li>
                 ))}
               </ul>
@@ -192,31 +183,29 @@ export const SuccessorDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockHandoverData.completedTasks.map((task) => (
-              <div key={task.id} className="border rounded-lg p-4 bg-success-soft border-success/20">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-success">{task.title}</h4>
-                  <Badge variant="outline" className="text-xs border-success text-success">
-                    Completed {new Date(task.completedDate).toLocaleDateString()}
-                  </Badge>
+            {completedTasks.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No completed tasks yet</p>
+            ) : (
+              completedTasks.map((task) => (
+                <div key={task.id} className="border rounded-lg p-4 bg-success-soft border-success/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-success">{task.title}</h4>
+                    <Badge variant="outline" className="text-xs border-success text-success">
+                      Completed
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">Category: {task.category}</p>
+                  <div className="flex gap-2">
+                    {task.notes && (
+                      <Button variant="outline" size="sm">
+                        <FileText className="w-3 h-3 mr-1" />
+                        View Notes
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-3">Category: {task.category}</p>
-                <div className="flex gap-2">
-                  {task.hasNotes && (
-                    <Button variant="outline" size="sm">
-                      <FileText className="w-3 h-3 mr-1" />
-                      View Notes
-                    </Button>
-                  )}
-                  {task.hasVideo && (
-                    <Button variant="outline" size="sm">
-                      <Video className="w-3 h-3 mr-1" />
-                      Watch Video
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -228,29 +217,36 @@ export const SuccessorDashboard: React.FC = () => {
             <Clock className="h-5 w-5 text-warning" />
             Pending Handover Items
           </CardTitle>
-          <CardDescription>Items still being prepared by {mockHandoverData.exitingEmployeeName}</CardDescription>
+          <CardDescription>Items still being prepared by your predecessor</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockHandoverData.pendingTasks.map((task) => (
-              <div key={task.id} className="border rounded-lg p-4 border-warning/20 bg-warning-soft">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium">{task.title}</h4>
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={task.priority === 'critical' ? 'destructive' : 'secondary'} 
-                      className="text-xs"
-                    >
-                      {task.priority}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      Due {new Date(task.dueDate).toLocaleDateString()}
-                    </Badge>
+            {pendingTasks.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">All tasks completed!</p>
+            ) : (
+              pendingTasks.map((task) => (
+                <div key={task.id} className="border rounded-lg p-4 border-warning/20 bg-warning-soft">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">{task.title}</h4>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={task.priority === 'critical' ? 'destructive' : 'secondary'} 
+                        className="text-xs"
+                      >
+                        {task.priority}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {task.status}
+                      </Badge>
+                    </div>
                   </div>
+                  <p className="text-sm text-muted-foreground">Category: {task.category}</p>
+                  {task.description && (
+                    <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                  )}
                 </div>
-                <p className="text-sm text-muted-foreground">Category: {task.category}</p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -259,7 +255,7 @@ export const SuccessorDashboard: React.FC = () => {
       <ChatModal
         isOpen={chatModal}
         onClose={() => setChatModal(false)}
-        exitingEmployeeName={mockHandoverData.exitingEmployeeName}
+        exitingEmployeeName="Predecessor"
       />
 
       {/* Escalation Modal */}
