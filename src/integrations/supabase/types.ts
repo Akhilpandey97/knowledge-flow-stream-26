@@ -80,6 +80,83 @@ export type Database = {
         }
         Relationships: []
       }
+      checklist_template_tasks: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          order_index: number
+          priority: string
+          template_id: string
+          title: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          priority?: string
+          template_id: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          priority?: string
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_template_tasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       handovers: {
         Row: {
           created_at: string | null
@@ -354,6 +431,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_checklist_template: {
+        Args: { p_handover_id: string; p_template_id: string }
+        Returns: undefined
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
