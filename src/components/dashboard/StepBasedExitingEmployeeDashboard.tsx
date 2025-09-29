@@ -24,9 +24,10 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   // Create handover with template on first load if no tasks exist
   useEffect(() => {
     if (!handoverLoading && tasks.length === 0 && hasUploadedDocument) {
+      console.log('Creating handover with template - tasks:', tasks.length, 'uploaded:', hasUploadedDocument);
       createHandoverWithTemplate();
     }
-  }, [handoverLoading, tasks.length, hasUploadedDocument, createHandoverWithTemplate]);
+  }, [handoverLoading, tasks.length, hasUploadedDocument]);
 
   const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const totalTasks = tasks.length;

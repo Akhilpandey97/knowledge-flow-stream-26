@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { HandoverTask } from '@/types/handover';
@@ -8,9 +8,10 @@ export const useHandover = () => {
   const [tasks, setTasks] = useState<HandoverTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [templateApplied, setTemplateApplied] = useState(false);
   const { user } = useAuth();
 
-  const createHandoverWithTemplate = async (successorId?: string) => {
+  const createHandoverWithTemplate = useCallback(async (successorId?: string) => {
     if (!user) return null;
     
     try {
@@ -102,7 +103,7 @@ export const useHandover = () => {
         .eq('id', user.id)
         .single();
 
-      if (userData?.role) {
+      if (userData?.role && !templateApplied) {
         // Find appropriate template for the user's role
         const { data: templates } = await supabase
           .from('checklist_templates')
@@ -122,6 +123,9 @@ export const useHandover = () => {
           if (templateError) {
             console.error('Error applying template:', templateError);
             // Don't throw error, handover was created/updated successfully
+          } else {
+            setTemplateApplied(true);
+            console.log('Template applied successfully');
           }
         }
       }
@@ -131,7 +135,7 @@ export const useHandover = () => {
       console.error('Error creating/updating handover:', error);
       throw error;
     }
-  };
+  }, [user, templateApplied]);
 
   useEffect(() => {
     if (user) {
