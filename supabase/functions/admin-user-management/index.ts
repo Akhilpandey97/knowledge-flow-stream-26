@@ -58,7 +58,7 @@ serve(async (req) => {
       throw new Error('Admin privileges required')
     }
 
-    const { action, email, role, password, userId } = await req.json()
+    const { action, email, role, department, password, userId } = await req.json()
 
     console.log(`Admin action: ${action} for email: ${email}`)
 
@@ -113,7 +113,8 @@ serve(async (req) => {
             {
               id: authUser.user.id,
               email,
-              role
+              role,
+              department: department || null
             }
           ])
           .select()

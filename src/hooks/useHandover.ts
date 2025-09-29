@@ -99,18 +99,24 @@ export const useHandover = () => {
       // Apply template to handover (for new handovers or existing ones without tasks)
       const { data: userData } = await supabase
         .from('users')
-        .select('role')
+        .select('role, department')
         .eq('id', user.id)
         .single();
 
       if (userData?.role) {
-        // Find appropriate template for the user's role
-        const { data: templates } = await supabase
+        // Find appropriate template for the user's role and department
+        let templatesQuery = supabase
           .from('checklist_templates')
           .select('id')
           .eq('role', userData.role)
-          .eq('is_active', true)
-          .limit(1);
+          .eq('is_active', true);
+
+        // If user has a department, try to find a template for that department first
+        if (userData.department) {
+          templatesQuery = templatesQuery.eq('department', userData.department);
+        }
+
+        const { data: templates } = await templatesQuery.limit(1);
 
         if (templates && templates.length > 0) {
           // Apply the template to the handover (the DB function now prevents duplicates)

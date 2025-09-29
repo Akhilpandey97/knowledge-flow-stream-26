@@ -7,7 +7,9 @@ import { toast } from '../ui/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Edit, Key, Trash2 } from 'lucide-react';
+import { DEPARTMENTS, type Department } from '../../constants/departments';
 
 type UserRole = 'exiting' | 'successor' | 'hr-manager' | 'admin';
 
@@ -15,6 +17,7 @@ interface User {
   id: string;
   email: string;
   role: UserRole;
+  department?: string;
 }
 
 export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStatsUpdate }) => {
@@ -26,6 +29,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
   const [formData, setFormData] = useState({
     email: '',
     role: 'exiting' as UserRole,
+    department: '',
     password: '',
   });
 
@@ -39,6 +43,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
         id: user.id,
         email: user.email,
         role: user.role as UserRole,
+        department: user.department,
       })));
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -68,6 +73,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
     setFormData({
       email: user.email,
       role: user.role,
+      department: user.department || '',
       password: '',
     });
     setIsEditDialogOpen(true);
@@ -81,7 +87,10 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
       // For now, we only support role updates via direct database update
       const { error } = await supabase
         .from('users')
-        .update({ role: formData.role })
+        .update({ 
+          role: formData.role,
+          department: formData.department || null
+        })
         .eq('id', editingUser.id);
 
       if (error) throw error;
@@ -93,7 +102,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
 
       setIsEditDialogOpen(false);
       setEditingUser(null);
-      setFormData({ email: '', role: 'exiting', password: '' });
+      setFormData({ email: '', role: 'exiting', department: '', password: '' });
       fetchUsers();
       onStatsUpdate();
     } catch (error: unknown) {
@@ -231,6 +240,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
           action: 'create',
           email: formData.email.trim(),
           role: formData.role,
+          department: formData.department || null,
           password: formData.password,
         },
       });
@@ -251,7 +261,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
       });
 
       setIsCreateDialogOpen(false);
-      setFormData({ email: '', role: 'exiting', password: '' });
+      setFormData({ email: '', role: 'exiting', department: '', password: '' });
       fetchUsers();
       onStatsUpdate();
     } catch (error: unknown) {
@@ -330,6 +340,21 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
                 </select>
               </div>
               <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
+                <Select value={formData.department} onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
@@ -395,6 +420,21 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
                 <option value="admin">Admin</option>
               </select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-department">Department</Label>
+              <Select value={formData.department} onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
@@ -423,6 +463,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -430,7 +471,7 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -442,6 +483,15 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground">
                         {getRoleDisplayName(user.role)}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {user.department ? (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary">
+                          {user.department}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date().toLocaleDateString()}
