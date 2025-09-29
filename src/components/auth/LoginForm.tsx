@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { PasswordResetDialog } from './PasswordResetDialog';
 
 export const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,8 +23,8 @@ export const LoginForm: React.FC = () => {
 
     try {
       await login(email, password);
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +87,22 @@ export const LoginForm: React.FC = () => {
                   'Sign in'
                 )}
               </Button>
+
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setIsResetDialogOpen(true)}
+                disabled={isLoading}
+              >
+                Reset Password
+              </Button>
             </form>
+
+            <PasswordResetDialog 
+              isOpen={isResetDialogOpen}
+              onClose={() => setIsResetDialogOpen(false)}
+            />
           </CardContent>
         </Card>
       </div>
