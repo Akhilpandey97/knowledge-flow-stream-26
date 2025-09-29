@@ -38,7 +38,10 @@ export const useHandoversList = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (handoversError) throw handoversError;
+      if (handoversError) {
+        console.error('Handovers list fetch error:', handoversError);
+        throw handoversError;
+      }
 
       if (!handoversData) {
         setHandovers([]);
@@ -92,7 +95,7 @@ export const useHandoversList = () => {
           exitingEmployeeEmail: handover.employee?.email || '',
           successor: handover.successor?.email?.split('@')[0] || 'Not Assigned',
           successorEmail: handover.successor?.email,
-          department: handover.employee?.department || 'Unknown',
+          department: handover.employee?.department || 'Unassigned',
           progress,
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
           status,

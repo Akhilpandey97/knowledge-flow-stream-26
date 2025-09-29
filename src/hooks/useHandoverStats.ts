@@ -40,7 +40,10 @@ export const useHandoverStats = () => {
           tasks(id, status)
         `);
 
-      if (handoversError) throw handoversError;
+      if (handoversError) {
+        console.error('Handovers fetch error:', handoversError);
+        throw handoversError;
+      }
 
       if (!handovers) {
         setStats(prev => ({ ...prev }));
@@ -68,7 +71,7 @@ export const useHandoverStats = () => {
       // Department distribution
       const departmentDistribution: { [key: string]: number } = {};
       handovers.forEach(h => {
-        const dept = h.employee?.department || 'Unknown';
+        const dept = h.employee?.department || 'Unassigned';
         departmentDistribution[dept] = (departmentDistribution[dept] || 0) + 1;
       });
 

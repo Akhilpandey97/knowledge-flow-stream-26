@@ -168,6 +168,7 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
         .insert({
           email: newUserData.email,
           role: newUserData.role,
+          department: newUserData.department  // Add department field
         })
         .select()
         .single();
