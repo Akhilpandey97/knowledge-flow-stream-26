@@ -99,7 +99,7 @@ export const useHandover = () => {
           title: task.title,
           description: task.description || '',
           category: getCategoryFromTitle(task.title),
-          isCompleted: task.status === 'done',
+          status: task.status === 'done' ? 'completed' : 'pending',
           priority: getPriorityFromStatus(task.status),
           notes: '', // Will be populated from notes table
           dueDate: task.due_date || undefined
@@ -150,8 +150,8 @@ export const useHandover = () => {
   const updateTask = async (taskId: string, updates: Partial<HandoverTask>) => {
     try {
       // Handle status updates
-      if (updates.isCompleted !== undefined) {
-        const statusValue = updates.isCompleted ? 'done' : 'pending';
+      if (updates.status) {
+        const statusValue = updates.status === 'completed' ? 'done' : 'pending';
         const { error } = await supabase
           .from('tasks')
           .update({ status: statusValue })

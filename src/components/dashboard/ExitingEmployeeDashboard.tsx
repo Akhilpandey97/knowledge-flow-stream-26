@@ -41,9 +41,10 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     if (!task) return;
 
     try {
-      await updateTask(taskId, { isCompleted: !task.isCompleted });
+      const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+      await updateTask(taskId, { status: newStatus });
       toast({
-        title: task.isCompleted ? 'Task marked as pending' : 'Task completed',
+        title: task.status === 'completed' ? 'Task marked as pending' : 'Task completed',
         description: `"${task.title}" has been updated.`,
       });
     } catch (error) {
@@ -108,7 +109,7 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     }
   };
 
-  const completedTasks = tasks.filter(task => task.isCompleted).length;
+  const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const progressPercentage = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
   // Show loading while fetching handover data
@@ -182,14 +183,14 @@ export const ExitingEmployeeDashboard: React.FC = () => {
           <Card 
             key={task.id} 
             className={`transition-all duration-200 hover:shadow-md ${
-              task.isCompleted ? 'bg-muted/30' : 'bg-background'
+              task.status === 'completed' ? 'bg-muted/30' : 'bg-background'
             }`}
           >
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 {/* Checkbox */}
                 <Checkbox
-                  checked={task.isCompleted}
+                  checked={task.status === 'completed'}
                   onCheckedChange={() => toggleTask(task.id)}
                   className="mt-1 flex-shrink-0"
                 />
@@ -199,7 +200,7 @@ export const ExitingEmployeeDashboard: React.FC = () => {
                   {/* Title and Priority */}
                   <div className="flex items-start justify-between gap-3">
                     <h3 className={`font-semibold text-lg leading-tight ${
-                      task.isCompleted ? 'line-through text-muted-foreground' : ''
+                      task.status === 'completed' ? 'line-through text-muted-foreground' : ''
                     }`}>
                       {task.title}
                     </h3>

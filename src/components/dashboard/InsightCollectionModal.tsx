@@ -7,16 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileText, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-
-interface HandoverTask {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  isCompleted: boolean;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  notes?: string;
-}
+import { HandoverTask } from '@/types/handover';
 
 interface InsightCollectionModalProps {
   isOpen: boolean;

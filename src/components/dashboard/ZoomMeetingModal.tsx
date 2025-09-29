@@ -7,16 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, Video, Plus, Edit2, ExternalLink } from 'lucide-react';
-
-interface HandoverTask {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  isCompleted: boolean;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  notes?: string;
-}
+import { HandoverTask } from '@/types/handover';
 
 interface Meeting {
   id: string;

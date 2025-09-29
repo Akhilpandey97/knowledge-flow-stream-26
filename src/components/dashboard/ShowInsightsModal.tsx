@@ -4,16 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Edit3, FileText, Calendar, User } from 'lucide-react';
-
-interface HandoverTask {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  isCompleted: boolean;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  notes?: string;
-}
+import { HandoverTask } from '@/types/handover';
 
 interface Insight {
   id: string;
