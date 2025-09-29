@@ -9,6 +9,60 @@ export const useHandover = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
+  const createHandoverWithTemplate = async (successorId?: string) => {
+    if (!user) return null;
+    
+    try {
+      // Create the handover first
+      const { data: handover, error: handoverError } = await supabase
+        .from('handovers')
+        .insert({
+          employee_id: user.id,
+          successor_id: successorId || null,
+          progress: 0
+        })
+        .select()
+        .single();
+
+      if (handoverError) throw handoverError;
+
+      // Get user's current role and department (if available)
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (userData?.role) {
+        // Find appropriate template for the user's role
+        const { data: templates } = await supabase
+          .from('checklist_templates')
+          .select('id')
+          .eq('role', userData.role)
+          .eq('is_active', true)
+          .limit(1);
+
+        if (templates && templates.length > 0) {
+          // Apply the template to the handover
+          const { error: templateError } = await supabase.rpc('apply_checklist_template', {
+            p_handover_id: handover.id,
+            p_template_id: templates[0].id
+          });
+
+          if (templateError) {
+            console.error('Error applying template:', templateError);
+            // Don't throw error, handover was created successfully
+          }
+        }
+      }
+
+      return handover;
+    } catch (error) {
+      console.error('Error creating handover:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchHandoverData();
@@ -148,6 +202,7 @@ export const useHandover = () => {
     loading,
     error,
     updateTask,
-    refetch: fetchHandoverData
+    refetch: fetchHandoverData,
+    createHandoverWithTemplate
   };
 };
