@@ -14,20 +14,88 @@ export const useHandover = () => {
     if (!user) return null;
     
     try {
-      // Create the handover first
-      const { data: handover, error: handoverError } = await supabase
+      // Check for existing handovers first
+      const { data: existingHandovers, error: fetchError } = await supabase
         .from('handovers')
-        .insert({
-          employee_id: user.id,
-          successor_id: successorId || null,
-          progress: 0
-        })
-        .select()
-        .single();
+        .select(`
+          *,
+          tasks (*)
+        `)
+        .eq('employee_id', user.id)
+        .order('created_at', { ascending: false });
 
-      if (handoverError) throw handoverError;
+      if (fetchError) {
+        console.error('Error fetching existing handovers:', fetchError);
+        // Continue with creation if fetch fails
+      }
 
-      // Get user's current role and department (if available)
+      let handover;
+      
+      if (existingHandovers && existingHandovers.length > 0) {
+        // Get the most recent handover
+        const mostRecentHandover = existingHandovers[0];
+        
+        // If the most recent handover has no tasks, use it and apply template
+        if (!mostRecentHandover.tasks || mostRecentHandover.tasks.length === 0) {
+          console.log('Using existing handover without tasks:', mostRecentHandover.id);
+          
+          // Update successor if provided
+          if (successorId && successorId !== mostRecentHandover.successor_id) {
+            const { error: updateError } = await supabase
+              .from('handovers')
+              .update({ successor_id: successorId })
+              .eq('id', mostRecentHandover.id);
+              
+            if (updateError) {
+              console.error('Error updating successor:', updateError);
+            }
+          }
+          
+          handover = { ...mostRecentHandover, successor_id: successorId || mostRecentHandover.successor_id };
+        } else {
+          // Most recent handover has tasks, check if we should create a new one
+          console.log('Most recent handover has', mostRecentHandover.tasks.length, 'tasks');
+          
+          // For now, use the existing handover instead of creating a new one
+          // This prevents duplicate handovers
+          console.log('Using existing handover with tasks:', mostRecentHandover.id);
+          handover = mostRecentHandover;
+          
+          // Update successor if provided and different
+          if (successorId && successorId !== mostRecentHandover.successor_id) {
+            const { error: updateError } = await supabase
+              .from('handovers')
+              .update({ successor_id: successorId })
+              .eq('id', mostRecentHandover.id);
+              
+            if (updateError) {
+              console.error('Error updating successor:', updateError);
+            } else {
+              handover.successor_id = successorId;
+            }
+          }
+          
+          // Return existing handover - no need to apply template again
+          return handover;
+        }
+      } else {
+        // No existing handovers, create a new one
+        console.log('Creating new handover');
+        const { data: newHandover, error: handoverError } = await supabase
+          .from('handovers')
+          .insert({
+            employee_id: user.id,
+            successor_id: successorId || null,
+            progress: 0
+          })
+          .select()
+          .single();
+
+        if (handoverError) throw handoverError;
+        handover = newHandover;
+      }
+
+      // Apply template to handover (for new handovers or existing ones without tasks)
       const { data: userData } = await supabase
         .from('users')
         .select('role')
@@ -45,6 +113,7 @@ export const useHandover = () => {
 
         if (templates && templates.length > 0) {
           // Apply the template to the handover
+          console.log('Applying template to handover:', handover.id);
           const { error: templateError } = await supabase.rpc('apply_checklist_template', {
             p_handover_id: handover.id,
             p_template_id: templates[0].id
@@ -52,14 +121,14 @@ export const useHandover = () => {
 
           if (templateError) {
             console.error('Error applying template:', templateError);
-            // Don't throw error, handover was created successfully
+            // Don't throw error, handover was created/updated successfully
           }
         }
       }
 
       return handover;
     } catch (error) {
-      console.error('Error creating handover:', error);
+      console.error('Error creating/updating handover:', error);
       throw error;
     }
   };
