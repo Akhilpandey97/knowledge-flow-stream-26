@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserCheck, UserPlus, Settings, Activity, RefreshCw, CheckSquare } from 'lucide-react';
+import { Users, UserCheck, UserPlus, Settings, Activity, RefreshCw, CheckSquare, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -11,6 +11,7 @@ import { IntegrationsManager } from '@/components/admin/IntegrationsManager';
 import { HandoverAuthSyncManager } from '@/components/admin/HandoverAuthSyncManager';
 import { ActivityLog } from '@/components/admin/ActivityLog';
 import ChecklistBuilder from '@/components/admin/ChecklistBuilder';
+import InsightFormBuilder from '@/components/admin/InsightFormBuilder';
 
 export const AdminDashboard = () => {
   const { user } = useAuth();
@@ -89,7 +90,7 @@ export const AdminDashboard = () => {
       <AdminStats stats={stats} loading={loading} />
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             User Management
@@ -97,6 +98,10 @@ export const AdminDashboard = () => {
           <TabsTrigger value="checklists" className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4" />
             Checklist Builder
+          </TabsTrigger>
+          <TabsTrigger value="insight-forms" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Insight Forms
           </TabsTrigger>
           <TabsTrigger value="handovers" className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4" />
@@ -118,6 +123,10 @@ export const AdminDashboard = () => {
 
         <TabsContent value="checklists" className="space-y-6">
           <ChecklistBuilder />
+        </TabsContent>
+
+        <TabsContent value="insight-forms" className="space-y-6">
+          <InsightFormBuilder />
         </TabsContent>
 
         <TabsContent value="handovers" className="space-y-6">

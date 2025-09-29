@@ -196,6 +196,86 @@ export type Database = {
           },
         ]
       }
+      insight_form_fields: {
+        Row: {
+          created_at: string
+          field_label: string
+          field_options: Json | null
+          field_placeholder: string | null
+          field_type: string
+          id: string
+          is_required: boolean
+          order_index: number
+          template_id: string
+          validation_rules: Json | null
+        }
+        Insert: {
+          created_at?: string
+          field_label: string
+          field_options?: Json | null
+          field_placeholder?: string | null
+          field_type: string
+          id?: string
+          is_required?: boolean
+          order_index?: number
+          template_id: string
+          validation_rules?: Json | null
+        }
+        Update: {
+          created_at?: string
+          field_label?: string
+          field_options?: Json | null
+          field_placeholder?: string | null
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          order_index?: number
+          template_id?: string
+          validation_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insight_form_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "insight_form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insight_form_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           access_token: string | null
