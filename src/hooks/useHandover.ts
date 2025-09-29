@@ -8,13 +8,16 @@ export const useHandover = () => {
   const [tasks, setTasks] = useState<HandoverTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [templateApplied, setTemplateApplied] = useState(false);
+  const [isTemplateApplying, setIsTemplateApplying] = useState(false);
   const { user } = useAuth();
 
   const createHandoverWithTemplate = useCallback(async (successorId?: string) => {
-    if (!user) return null;
+    if (!user || isTemplateApplying) return null;
     
     try {
+      setIsTemplateApplying(true);
+      console.log('Creating/updating handover with template for user:', user.id);
+      
       // Check for existing handovers first
       const { data: existingHandovers, error: fetchError } = await supabase
         .from('handovers')
@@ -54,12 +57,9 @@ export const useHandover = () => {
           
           handover = { ...mostRecentHandover, successor_id: successorId || mostRecentHandover.successor_id };
         } else {
-          // Most recent handover has tasks, check if we should create a new one
-          console.log('Most recent handover has', mostRecentHandover.tasks.length, 'tasks');
+          // Most recent handover has tasks, don't create new one or apply template again
+          console.log('Most recent handover has', mostRecentHandover.tasks.length, 'tasks - not applying template again');
           
-          // For now, use the existing handover instead of creating a new one
-          // This prevents duplicate handovers
-          console.log('Using existing handover with tasks:', mostRecentHandover.id);
           handover = mostRecentHandover;
           
           // Update successor if provided and different
@@ -103,7 +103,7 @@ export const useHandover = () => {
         .eq('id', user.id)
         .single();
 
-      if (userData?.role && !templateApplied) {
+      if (userData?.role) {
         // Find appropriate template for the user's role
         const { data: templates } = await supabase
           .from('checklist_templates')
@@ -113,7 +113,7 @@ export const useHandover = () => {
           .limit(1);
 
         if (templates && templates.length > 0) {
-          // Apply the template to the handover
+          // Apply the template to the handover (the DB function now prevents duplicates)
           console.log('Applying template to handover:', handover.id);
           const { error: templateError } = await supabase.rpc('apply_checklist_template', {
             p_handover_id: handover.id,
@@ -124,8 +124,9 @@ export const useHandover = () => {
             console.error('Error applying template:', templateError);
             // Don't throw error, handover was created/updated successfully
           } else {
-            setTemplateApplied(true);
             console.log('Template applied successfully');
+            // Refresh tasks after template application
+            await fetchHandoverData();
           }
         }
       }
@@ -134,8 +135,10 @@ export const useHandover = () => {
     } catch (error) {
       console.error('Error creating/updating handover:', error);
       throw error;
+    } finally {
+      setIsTemplateApplying(false);
     }
-  }, [user, templateApplied]);
+  }, [user, isTemplateApplying]);
 
   useEffect(() => {
     if (user) {
