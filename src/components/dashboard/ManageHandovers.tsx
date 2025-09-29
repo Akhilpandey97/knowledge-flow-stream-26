@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,13 +6,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useUsersManagement } from '@/hooks/useUsersManagement';
+import { useRealHandovers } from '@/hooks/useRealHandovers';
 import { 
   Users, 
   Plus, 
   ArrowLeft,
-  UserPlus
+  UserPlus,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface HandoverRecord {
@@ -82,19 +88,21 @@ const mockEmployees = [
 const departments = ['Sales', 'Engineering', 'Finance', 'Marketing', 'HR', 'Operations'];
 
 export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
-  const [handovers, setHandovers] = useState<HandoverRecord[]>(mockHandovers);
+  // Use real data hooks
+  const { users, loading: usersLoading, error: usersError, refetch: refetchUsers } = useUsersManagement();
+  const { handovers, loading: handoversLoading, error: handoversError, refetch: refetchHandovers, createHandover } = useRealHandovers();
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAddExitingModalOpen, setIsAddExitingModalOpen] = useState(false);
   const [isAddSuccessorModalOpen, setIsAddSuccessorModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   
+  
   const [formData, setFormData] = useState({
     exitingEmployee: '',
     successor: '',
-    department: '',
-    position: '',
-    dueDate: ''
+    department: ''
   });
 
   const [newUserData, setNewUserData] = useState({
@@ -102,6 +110,11 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
     role: '',
     department: ''
   });
+
+  // Filter users by role
+  const exitingEmployees = users.filter(user => user.role === 'exiting');
+  const successors = users.filter(user => user.role === 'successor');
+  const allEmployees = users.filter(user => user.role === 'exiting' || user.role === 'successor');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -119,35 +132,47 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
     return 'critical';
   };
 
-  const handleCreateHandover = () => {
-    if (!formData.exitingEmployee || !formData.department || !formData.position || !formData.dueDate) {
+  const handleCreateHandover = async () => {
+    if (!formData.exitingEmployee) {
+      toast({
+        title: "Error",
+        description: "Please select an exiting employee",
+        variant: "destructive",
+      });
       return;
     }
 
-    const exitingEmployeeObj = mockEmployees.find(emp => emp.id === formData.exitingEmployee);
-    const successorObj = formData.successor ? mockEmployees.find(emp => emp.id === formData.successor) : null;
+    setLoading(true);
+    try {
+      const result = await createHandover(
+        formData.exitingEmployee,
+        formData.successor || undefined
+      );
 
-    const newHandover: HandoverRecord = {
-      id: Date.now().toString(),
-      exitingEmployee: exitingEmployeeObj?.name || '',
-      successor: successorObj?.name || 'Not Assigned',
-      department: formData.department,
-      position: formData.position,
-      progress: 0,
-      dueDate: formData.dueDate,
-      status: 'not-started',
-      criticalGaps: 0
-    };
+      if (result.error) {
+        throw new Error(result.error);
+      }
 
-    setHandovers([...handovers, newHandover]);
-    setIsCreateModalOpen(false);
-    setFormData({
-      exitingEmployee: '',
-      successor: '',
-      department: '',
-      position: '',
-      dueDate: ''
-    });
+      toast({
+        title: "Success",
+        description: "Handover created successfully!",
+      });
+
+      setIsCreateModalOpen(false);
+      setFormData({
+        exitingEmployee: '',
+        successor: '',
+        department: ''
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create handover",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddUser = async (role: 'exiting' | 'successor') => {
@@ -205,6 +230,9 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
       } else {
         setIsAddSuccessorModalOpen(false);
       }
+      
+      // Refresh users list
+      refetchUsers();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -216,13 +244,33 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
     }
   };
 
-  const filteredSuccessors = mockEmployees.filter(emp => 
-    emp.id !== formData.exitingEmployee && 
-    (formData.department === '' || emp.department === formData.department)
+  const filteredSuccessors = successors.filter(user => 
+    user.id !== formData.exitingEmployee && 
+    (!formData.department || user.department === formData.department)
   );
+
+  const isDataLoading = usersLoading || handoversLoading;
 
   return (
     <div className="space-y-6">
+      {/* Loading state */}
+      {isDataLoading && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin mr-2" />
+          <span>Loading data...</span>
+        </div>
+      )}
+
+      {/* Error states */}
+      {(usersError || handoversError) && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Error loading data: {usersError || handoversError}. Please refresh the page.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <Button variant="outline" onClick={onBack} className="flex items-center gap-2">
@@ -253,39 +301,13 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
                       <SelectValue placeholder="Select exiting employee" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockEmployees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name} - {emp.position}
+                      {exitingEmployees.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.email.split('@')[0]} - {user.department || 'No Department'}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="position">Position</Label>
-                  <Input
-                    id="position"
-                    value={formData.position}
-                    onChange={(e) => setFormData({...formData, position: e.target.value})}
-                    placeholder="Enter position title"
-                  />
                 </div>
 
                 <div className="space-y-2">
@@ -295,28 +317,29 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
                       <SelectValue placeholder="Select successor or leave empty" />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredSuccessors.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name} - {emp.position}
+                      {filteredSuccessors.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.email.split('@')[0]} - {user.department || 'No Department'}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Due Date</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                  />
-                </div>
-
                 <div className="flex gap-2 pt-4">
-                  <Button onClick={handleCreateHandover} className="flex-1">
-                    Create Handover
+                  <Button 
+                    onClick={handleCreateHandover} 
+                    className="flex-1"
+                    disabled={loading || !formData.exitingEmployee}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Handover'
+                    )}
                   </Button>
                   <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
                     Cancel
@@ -481,22 +504,145 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
             Use the tools above to set up new handover processes, add departing employees to the system, 
             or register new successors for knowledge transfer.
           </p>
-          <div className="flex justify-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary"></div>
-              <span>Create structured handover processes</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-success"></div>
-              <span>Track knowledge transfer progress</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-warning"></div>
-              <span>Ensure seamless transitions</span>
-            </div>
-          </div>
         </CardContent>
       </Card>
+
+      {/* Current Handovers */}
+      <Card className="shadow-medium">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Active Handovers
+            <Badge variant="secondary" className="ml-auto">
+              {handovers.length} total
+            </Badge>
+          </CardTitle>
+          <CardDescription>Monitor and manage ongoing knowledge transfers</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!isDataLoading && handovers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No handovers yet</h3>
+              <p className="text-sm">Get started by creating your first handover or adding users to the system.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {handovers.map((handover) => {
+                const tasks = handover.tasks || [];
+                const taskCount = tasks.length;
+                const completedTasks = tasks.filter(task => task.status === 'completed').length;
+                const progress = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : handover.progress || 0;
+                
+                return (
+                  <div key={handover.id} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">
+                          {handover.employee?.email?.split('@')[0] || 'Unknown'} → {handover.successor?.email?.split('@')[0] || 'Not Assigned'}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {handover.employee?.department || 'No Department'} Department
+                        </p>
+                        <div className="flex gap-2 text-xs text-muted-foreground">
+                          <span>{handover.employee?.email}</span>
+                          {handover.successor?.email && (
+                            <>
+                              <span>→</span>
+                              <span>{handover.successor.email}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <Badge 
+                          variant={progress >= 80 ? 'default' : progress >= 50 ? 'secondary' : 'destructive'}
+                          className="text-xs"
+                        >
+                          {progress >= 80 ? 'Near Complete' : progress >= 50 ? 'In Progress' : 'Getting Started'}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground">
+                          Created {new Date(handover.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Progress</span>
+                        <span className="font-medium">{progress}%</span>
+                      </div>
+                      <Progress 
+                        value={progress} 
+                        className="h-1.5"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {completedTasks} of {taskCount} tasks completed
+                      </p>
+                    </div>
+
+                    {!handover.successor_id && (
+                      <Alert className="border-critical/20 bg-critical-soft py-2">
+                        <AlertTriangle className="h-3 w-3" />
+                        <AlertDescription className="text-xs">
+                          No successor assigned - knowledge at risk
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Users Summary */}
+      {!isDataLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <UserPlus className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold">{exitingEmployees.length}</div>
+                  <div className="text-sm text-muted-foreground">Exiting Employees</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold">{successors.length}</div>
+                  <div className="text-sm text-muted-foreground">Successors Available</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Users className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold">{users.length}</div>
+                  <div className="text-sm text-muted-foreground">Total Users</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
