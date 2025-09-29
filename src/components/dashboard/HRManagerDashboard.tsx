@@ -100,7 +100,7 @@ export const HRManagerDashboard: React.FC = () => {
               <Brain className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-foreground">Manager Dashboard</h2>
+              <h2 className="text-3xl font-bold text-foreground">HR Manager Dashboard</h2>
               <p className="text-muted-foreground flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
                 AI-powered employee transition management
