@@ -108,7 +108,8 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
   const [newUserData, setNewUserData] = useState({
     email: '',
     role: '',
-    department: ''
+    department: '',
+    password: ''
   });
 
   // Filter users by role
@@ -176,7 +177,7 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
   };
 
   const handleAddUser = async (role: 'exiting' | 'successor') => {
-    if (!newUserData.email || !newUserData.role || !newUserData.department) {
+    if (!newUserData.email || !newUserData.role || !newUserData.department || !newUserData.password) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -193,6 +194,7 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
           email: newUserData.email,
           role: newUserData.role,
           department: newUserData.department,
+          password: newUserData.password,
         },
       });
 
@@ -211,7 +213,7 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
       }
 
       // Reset form and close modal
-      setNewUserData({ email: '', role: '', department: '' });
+      setNewUserData({ email: '', role: '', department: '', password: '' });
       if (role === 'exiting') {
         setIsAddExitingModalOpen(false);
       } else {
@@ -391,6 +393,17 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="exitingPassword">Password</Label>
+                  <Input
+                    id="exitingPassword"
+                    type="password"
+                    value={newUserData.password}
+                    onChange={(e) => setNewUserData({...newUserData, password: e.target.value})}
+                    placeholder="Enter password"
+                  />
+                </div>
+
                 <div className="flex gap-2 pt-4">
                   <Button 
                     onClick={() => handleAddUser('exiting')} 
@@ -459,6 +472,17 @@ export const ManageHandovers: React.FC<ManageHandoversProps> = ({ onBack }) => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="successorPassword">Password</Label>
+                  <Input
+                    id="successorPassword"
+                    type="password"
+                    value={newUserData.password}
+                    onChange={(e) => setNewUserData({...newUserData, password: e.target.value})}
+                    placeholder="Enter password"
+                  />
                 </div>
 
                 <div className="flex gap-2 pt-4">

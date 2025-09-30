@@ -11,6 +11,7 @@ interface SignupEmailRequest {
   email: string;
   role: string;
   department: string;
+  password: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -29,39 +30,38 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    const { email, role, department }: SignupEmailRequest = await req.json();
+    const { email, role, department, password }: SignupEmailRequest = await req.json();
 
-    console.log("Sending signup invite to:", email, "with role:", role);
+    console.log("Creating user account for:", email, "with role:", role);
 
     const roleTitle = role === 'exiting' ? 'Exiting Employee' : 
                      role === 'successor' ? 'Successor' : 
                      'Employee';
 
-    // Use Supabase Admin API to send real invite email
-    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      email,
-      {
-        data: {
-          role: role,
-          department: department
-        },
-        redirectTo: `${Deno.env.get("SUPABASE_URL")?.replace('supabase.co', 'supabase.co')}/auth/callback`
+    // Use Supabase Admin API to create user with password
+    const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: email,
+      password: password,
+      email_confirm: true, // Auto-confirm email so they can login immediately
+      user_metadata: {
+        role: role,
+        department: department
       }
-    );
+    });
 
-    if (inviteError) {
-      console.error("Error sending invite:", inviteError);
-      throw inviteError;
+    if (createError) {
+      console.error("Error creating user:", createError);
+      throw createError;
     }
 
-    console.log("Invite sent successfully:", inviteData);
+    console.log("User created successfully:", userData);
 
     // Ensure user record exists in users table with correct Auth ID
-    if (inviteData.user) {
+    if (userData.user) {
       const { error: userInsertError } = await supabaseAdmin
         .from('users')
         .upsert({
-          id: inviteData.user.id, // Use the Auth user ID
+          id: userData.user.id, // Use the Auth user ID
           email: email,
           role: role,
           department: department
@@ -77,8 +77,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: `Signup invite sent successfully to ${email}`,
-      user: inviteData 
+      message: `User account created successfully for ${email}`,
+      user: userData 
     }), {
       status: 200,
       headers: {
