@@ -29,14 +29,16 @@ import { ManageHandovers } from './ManageHandovers';
 import { useHandoverStats } from '@/hooks/useHandoverStats';
 import { useHandoversList } from '@/hooks/useHandoversList';
 import { useAIInsightsForHR } from '@/hooks/useAIInsightsForHR';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 export const HRManagerDashboard: React.FC = () => {
   const [showManageHandovers, setShowManageHandovers] = useState(false);
+  const { user } = useAuth();
   
-  // Fetch real data using custom hooks
-  const { stats, loading: statsLoading, error: statsError } = useHandoverStats();
-  const { handovers, loading: handoversLoading, error: handoversError } = useHandoversList();
+  // Fetch real data using custom hooks filtered by manager's department
+  const { stats, loading: statsLoading, error: statsError } = useHandoverStats(user?.department);
+  const { handovers, loading: handoversLoading, error: handoversError } = useHandoversList(user?.department);
   const { insights, loading: insightsLoading, error: insightsError } = useAIInsightsForHR();
   
   const isLoading = statsLoading || handoversLoading || insightsLoading;
@@ -100,10 +102,10 @@ export const HRManagerDashboard: React.FC = () => {
               <Brain className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-foreground">HR Manager Dashboard</h2>
+              <h2 className="text-3xl font-bold text-foreground">Manager's Dashboard</h2>
               <p className="text-muted-foreground flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                AI-powered employee transition management
+                {user?.department ? `${user.department} Department` : 'AI-powered employee transition management'}
               </p>
             </div>
           </div>

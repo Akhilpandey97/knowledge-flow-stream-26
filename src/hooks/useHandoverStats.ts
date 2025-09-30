@@ -12,7 +12,7 @@ interface HandoverStats {
   departmentDistribution: { [key: string]: number };
 }
 
-export const useHandoverStats = () => {
+export const useHandoverStats = (department?: string) => {
   const [stats, setStats] = useState<HandoverStats>({
     totalHandovers: 0,
     completedHandovers: 0,
@@ -31,7 +31,7 @@ export const useHandoverStats = () => {
       setLoading(true);
       
       // Fetch handovers with related user data
-      const { data: handovers, error: handoversError } = await supabase
+      let query = supabase
         .from('handovers')
         .select(`
           *,
@@ -40,37 +40,39 @@ export const useHandoverStats = () => {
           tasks(id, status)
         `);
 
+      const { data: handovers, error: handoversError } = await query;
+
       if (handoversError) {
         console.error('Handovers fetch error:', handoversError);
         throw handoversError;
       }
 
-      if (!handovers) {
-        setStats(prev => ({ ...prev }));
-        return;
-      }
+      // Filter by department on client side if specified
+      const filteredHandovers = department 
+        ? (handovers || []).filter(h => h.employee?.department === department)
+        : (handovers || []);
 
-      const totalHandovers = handovers.length;
-      const exitingEmployees = handovers.length;
-      const successorsAssigned = handovers.filter(h => h.successor_id).length;
+      const totalHandovers = filteredHandovers.length;
+      const exitingEmployees = filteredHandovers.length;
+      const successorsAssigned = filteredHandovers.filter(h => h.successor_id).length;
       
       // Calculate completion status based on progress
-      const completedHandovers = handovers.filter(h => h.progress >= 90).length;
-      const inProgressHandovers = handovers.filter(h => h.progress < 90 && h.progress > 0).length;
+      const completedHandovers = filteredHandovers.filter(h => h.progress >= 90).length;
+      const inProgressHandovers = filteredHandovers.filter(h => h.progress < 90 && h.progress > 0).length;
       
       // Calculate overall progress
-      const overallProgress = handovers.length > 0 
-        ? Math.round(handovers.reduce((sum, h) => sum + (h.progress || 0), 0) / handovers.length)
+      const overallProgress = filteredHandovers.length > 0 
+        ? Math.round(filteredHandovers.reduce((sum, h) => sum + (h.progress || 0), 0) / filteredHandovers.length)
         : 0;
 
       // Calculate high risk based on low progress and missing successors
-      const highRiskCount = handovers.filter(h => 
+      const highRiskCount = filteredHandovers.filter(h => 
         h.progress < 50 || !h.successor_id
       ).length;
 
       // Department distribution
       const departmentDistribution: { [key: string]: number } = {};
-      handovers.forEach(h => {
+      filteredHandovers.forEach(h => {
         const dept = h.employee?.department || 'Unassigned';
         departmentDistribution[dept] = (departmentDistribution[dept] || 0) + 1;
       });

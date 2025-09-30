@@ -19,7 +19,7 @@ interface HandoverWithDetails {
   createdAt: string;
 }
 
-export const useHandoversList = () => {
+export const useHandoversList = (department?: string) => {
   const [handovers, setHandovers] = useState<HandoverWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,12 @@ export const useHandoversList = () => {
         return;
       }
 
-      const processedHandovers: HandoverWithDetails[] = handoversData.map(handover => {
+      // Filter by department if specified
+      const filteredData = department
+        ? handoversData.filter(h => h.employee?.department === department)
+        : handoversData;
+
+      const processedHandovers: HandoverWithDetails[] = filteredData.map(handover => {
         const tasks = handover.tasks || [];
         const taskCount = tasks.length;
         const completedTasks = tasks.filter((task: any) => task.status === 'completed').length;
