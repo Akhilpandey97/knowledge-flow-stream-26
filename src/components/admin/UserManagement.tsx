@@ -25,6 +25,10 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
   const [loading, setLoading] = useState<boolean>(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState<boolean>(false);
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string>('');
+  const [resetPasswordUserEmail, setResetPasswordUserEmail] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -115,13 +119,40 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
     }
   };
 
+  // Open password reset dialog
+  const openResetPasswordDialog = (userId: string, userEmail: string) => {
+    setResetPasswordUserId(userId);
+    setResetPasswordUserEmail(userEmail);
+    setNewPassword('');
+    setIsResetPasswordDialogOpen(true);
+  };
+
   // Handle password reset
-  const handleResetPassword = async (userId: string) => {
+  const handleResetPassword = async () => {
+    if (!newPassword.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Password is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('admin-user-management', {
         body: {
           action: 'reset-password',
-          userId: userId,
+          userId: resetPasswordUserId,
+          password: newPassword,
         },
       });
 
@@ -137,8 +168,13 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
 
       toast({
         title: "Success",
-        description: `Password reset successfully. New password: ${data.newPassword}`,
+        description: `Password reset successfully for ${resetPasswordUserEmail}`,
       });
+
+      setIsResetPasswordDialogOpen(false);
+      setNewPassword('');
+      setResetPasswordUserId('');
+      setResetPasswordUserEmail('');
     } catch (error: unknown) {
       console.error('Error resetting password:', error);
       let errorMessage = "Failed to reset password";
@@ -382,6 +418,56 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
         </Dialog>
       </div>
 
+      {/* Reset Password Dialog */}
+      <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleResetPassword();
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetPasswordUserEmail}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min. 6 characters)"
+                required
+              />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsResetPasswordDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                Reset Password
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
@@ -506,27 +592,13 @@ export const UserManagement: React.FC<{ onStatsUpdate: () => void }> = ({ onStat
                           <Edit className="h-4 w-4" />
                         </Button>
                         
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Key className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Reset Password</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will generate a new password for {user.email}. The new password will be displayed once.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleResetPassword(user.id)}>
-                                Reset Password
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openResetPasswordDialog(user.id, user.email)}
+                        >
+                          <Key className="h-4 w-4" />
+                        </Button>
 
                         <AlertDialog>
                           <AlertDialogTrigger asChild>

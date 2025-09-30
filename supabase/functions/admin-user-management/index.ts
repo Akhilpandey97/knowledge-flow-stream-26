@@ -162,7 +162,13 @@ serve(async (req) => {
           throw new Error('User ID is required for password reset')
         }
 
-        const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+        // Use provided password or generate a random one
+        const newPassword = password || (Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8))
+
+        // Validate password length
+        if (newPassword.length < 6) {
+          throw new Error('Password must be at least 6 characters long')
+        }
 
         const { error } = await supabase.auth.admin.updateUserById(userId, {
           password: newPassword
