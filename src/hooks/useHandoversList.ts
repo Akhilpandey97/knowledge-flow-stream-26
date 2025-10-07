@@ -19,6 +19,17 @@ interface HandoverWithDetails {
   createdAt: string;
 }
 
+// Normalize department names for consistent filtering
+const normalizeDepartment = (dept: string | undefined): string | undefined => {
+  if (!dept) return undefined;
+  const normalized = dept.toLowerCase().trim();
+  if (normalized.includes('human') || normalized === 'hr') return 'HR';
+  if (normalized.includes('engineering') || normalized === 'eng') return 'Engineering';
+  if (normalized.includes('sales')) return 'Sales';
+  if (normalized.includes('marketing')) return 'Marketing';
+  return dept;
+};
+
 export const useHandoversList = (department?: string) => {
   const [handovers, setHandovers] = useState<HandoverWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +38,9 @@ export const useHandoversList = (department?: string) => {
   const fetchHandovers = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      const normalizedDept = normalizeDepartment(department);
       
       const { data: handoversData, error: handoversError } = await supabase
         .from('handovers')
@@ -49,8 +63,11 @@ export const useHandoversList = (department?: string) => {
       }
 
       // Filter by department if specified
-      const filteredData = department
-        ? handoversData.filter(h => h.employee?.department === department)
+      const filteredData = normalizedDept
+        ? handoversData.filter(h => {
+            const empDept = normalizeDepartment(h.employee?.department);
+            return empDept === normalizedDept;
+          })
         : handoversData;
 
       const processedHandovers: HandoverWithDetails[] = filteredData.map(handover => {
@@ -148,7 +165,7 @@ export const useHandoversList = (department?: string) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [department]);
 
   return { handovers, loading, error, refetch: fetchHandovers };
 };

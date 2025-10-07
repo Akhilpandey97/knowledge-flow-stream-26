@@ -173,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Unknown',
           email: profile.email,
           role: mappedRole,
-          department: getDepartmentForRole(profile.role),
+          department: profile.department || getDepartmentForRole(profile.role),
           avatar: supabaseUser.user_metadata?.avatar_url || ''
         };
         
@@ -215,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Unknown',
             email: newProfile.email,
             role: mappedRole,
-            department: getDepartmentForRole(newProfile.role),
+            department: newProfile.department || getDepartmentForRole(newProfile.role),
             avatar: supabaseUser.user_metadata?.avatar_url || ''
           };
           setUser(mappedUser);

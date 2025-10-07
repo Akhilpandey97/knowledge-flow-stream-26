@@ -12,6 +12,18 @@ interface HandoverStats {
   departmentDistribution: { [key: string]: number };
 }
 
+// Normalize department names for consistent filtering
+const normalizeDepartment = (dept: string | undefined): string | undefined => {
+  if (!dept) return undefined;
+  const normalized = dept.toLowerCase().trim();
+  // Map common variations
+  if (normalized.includes('human') || normalized === 'hr') return 'HR';
+  if (normalized.includes('engineering') || normalized === 'eng') return 'Engineering';
+  if (normalized.includes('sales')) return 'Sales';
+  if (normalized.includes('marketing')) return 'Marketing';
+  return dept; // Return original if no match
+};
+
 export const useHandoverStats = (department?: string) => {
   const [stats, setStats] = useState<HandoverStats>({
     totalHandovers: 0,
@@ -29,6 +41,8 @@ export const useHandoverStats = (department?: string) => {
   const fetchStats = async () => {
     try {
       setLoading(true);
+      
+      const normalizedDept = normalizeDepartment(department);
       
       // Fetch handovers with related user data
       let query = supabase
@@ -48,8 +62,11 @@ export const useHandoverStats = (department?: string) => {
       }
 
       // Filter by department on client side if specified
-      const filteredHandovers = department 
-        ? (handovers || []).filter(h => h.employee?.department === department)
+      const filteredHandovers = normalizedDept 
+        ? (handovers || []).filter(h => {
+            const empDept = normalizeDepartment(h.employee?.department);
+            return empDept === normalizedDept;
+          })
         : (handovers || []);
 
       const totalHandovers = filteredHandovers.length;
@@ -121,7 +138,7 @@ export const useHandoverStats = (department?: string) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [department]);
 
   return { stats, loading, error, refetch: fetchStats };
 };
