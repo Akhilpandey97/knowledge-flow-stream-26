@@ -4,13 +4,11 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   BarChart3, 
   Users, 
   AlertTriangle, 
   TrendingUp, 
-  Calendar,
   Eye,
   MessageSquare,
   Brain,
@@ -20,7 +18,6 @@ import {
   UserX,
   Zap,
   TrendingDown,
-  Clock,
   CheckCircle2,
   Loader2
 } from 'lucide-react';
@@ -265,200 +262,75 @@ export const HRManagerDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Employee Management Tabs */}
-      <Tabs defaultValue="transitions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="transitions">Active Transitions</TabsTrigger>
-          <TabsTrigger value="exiting">Exiting Employees</TabsTrigger>
-          <TabsTrigger value="successors">Successors</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="transitions">
-          <Card className="shadow-medium">
-            <CardHeader>
+      {/* Active Handovers Section */}
+      <Card className="shadow-medium">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                Active Knowledge Transitions
-                <Badge variant="secondary" className="ml-auto">
-                  <Brain className="h-3 w-3 mr-1" />
-                  AI Monitored
-                </Badge>
+                Active Handovers
               </CardTitle>
-              <CardDescription>AI-powered transition monitoring and risk assessment</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {handovers.map((handover) => (
-                  <div key={handover.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <h4 className="font-medium">{handover.exitingEmployee} → {handover.successor}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {handover.department} Department
-                        </p>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <div className="flex gap-2">
-                          <Badge variant={getStatusColor(handover.status) as any} className="text-xs">
-                            {handover.status.replace('-', ' ')}
-                          </Badge>
-                          <Badge className={`text-xs ${getRiskColor(handover.aiRiskLevel)}`}>
-                            <Brain className="h-2 w-2 mr-1" />
-                            {handover.aiRiskLevel} risk
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Due {new Date(handover.dueDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span>Progress</span>
-                        <span className="font-medium">{handover.progress}%</span>
-                      </div>
-                      <Progress 
-                        value={handover.progress} 
-                        variant={getProgressVariant(handover.progress)}
-                        className="h-1.5"
-                      />
-                    </div>
-
-                    {/* AI Recommendation */}
-                    <div className="bg-primary-soft/30 p-3 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <Sparkles className="h-4 w-4 text-primary mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-primary">AI Recommendation</p>
-                          <p className="text-xs text-muted-foreground">{handover.aiRecommendation}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {handover.criticalGaps > 0 && (
-                      <Alert className="border-critical/20 bg-critical-soft py-2">
-                        <AlertTriangle className="h-3 w-3" />
-                        <AlertDescription className="text-xs">
-                          {handover.criticalGaps} critical gap{handover.criticalGaps > 1 ? 's' : ''} identified by AI analysis
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-3 h-3 mr-1" />
-                        View Details
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <MessageSquare className="w-3 h-3 mr-1" />
-                        Contact Team
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Brain className="w-3 h-3 mr-1" />
-                        AI Analysis
-                      </Button>
+              <CardDescription>Monitor and manage ongoing knowledge transfers</CardDescription>
+            </div>
+            <Badge variant="secondary" className="text-sm">
+              {handovers.length} total
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {handovers.map((handover) => (
+              <div key={handover.id} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-base">
+                      {handover.exitingEmployee} → {handover.successor}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {handover.department} Department
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{handover.exitingEmployeeEmail}</span>
+                      <span>→</span>
+                      <span>{handover.successorEmail || 'Not assigned'}</span>
                     </div>
                   </div>
-                ))}
-                {handovers.length === 0 && !handoversLoading && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No active handovers found. Create your first handover to get started.</p>
+                  <div className="text-right space-y-2">
+                    <Badge variant={getStatusColor(handover.status) as any} className="text-xs">
+                      {handover.status.replace('-', ' ')}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground">
+                      Created {new Date(handover.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
-                )}
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Progress</span>
+                    <span className="font-medium">{handover.progress}%</span>
+                  </div>
+                  <Progress 
+                    value={handover.progress} 
+                    variant={getProgressVariant(handover.progress)}
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {handover.completedTasks} of {handover.taskCount} tasks completed
+                  </p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="exiting">
-          <Card className="shadow-medium">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserX className="h-5 w-5 text-orange-600" />
-                Exiting Employees
-              </CardTitle>
-              <CardDescription>Manage departing team members and knowledge capture</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {handovers.map((handover) => (
-                  <div key={handover.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{handover.exitingEmployee}</h4>
-                        <p className="text-sm text-muted-foreground">{handover.department} Department</p>
-                        <p className="text-xs text-muted-foreground">{handover.exitingEmployeeEmail}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">Target: {new Date(handover.dueDate).toLocaleDateString()}</p>
-                        <p className="text-xs text-muted-foreground">{handover.progress}% knowledge transferred</p>
-                        <p className="text-xs text-muted-foreground">{handover.completedTasks}/{handover.taskCount} tasks done</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {handovers.length === 0 && !handoversLoading && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <UserX className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No exiting employees found.</p>
-                  </div>
-                )}
+            ))}
+            {handovers.length === 0 && !handoversLoading && (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-base font-medium mb-1">No active handovers found. Create your first handover to get started.</p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="successors">
-          <Card className="shadow-medium">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-blue-600" />
-                Successor Management
-              </CardTitle>
-              <CardDescription>Track successor assignments and readiness</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {handovers.filter(h => h.successor !== 'Not Assigned').map((handover) => (
-                  <div key={handover.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{handover.successor}</h4>
-                        <p className="text-sm text-muted-foreground">Taking over from {handover.exitingEmployee}</p>
-                        <p className="text-xs text-muted-foreground">{handover.department} Department</p>
-                        {handover.successorEmail && (
-                          <p className="text-xs text-muted-foreground">{handover.successorEmail}</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <div className="flex gap-2 mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            {handover.progress}% Ready
-                          </Badge>
-                          <Badge className={`text-xs ${getRiskColor(handover.aiRiskLevel)}`}>
-                            {handover.aiRiskLevel} risk
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Target {new Date(handover.dueDate).toLocaleDateString()}</p>
-                        <p className="text-xs text-muted-foreground">{handover.completedTasks}/{handover.taskCount} tasks</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {handovers.filter(h => h.successor !== 'Not Assigned').length === 0 && !handoversLoading && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <UserCheck className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No successors assigned yet.</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
