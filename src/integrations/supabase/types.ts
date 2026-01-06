@@ -20,7 +20,7 @@ export type Database = {
           created_at: string
           details: Json | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           resource_id: string | null
           resource_type: string | null
           user_agent: string | null
@@ -31,7 +31,7 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resource_id?: string | null
           resource_type?: string | null
           user_agent?: string | null
@@ -42,7 +42,7 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resource_id?: string | null
           resource_type?: string | null
           user_agent?: string | null
@@ -518,16 +518,10 @@ export type Database = {
         Args: { p_handover_id: string; p_template_id: string }
         Returns: undefined
       }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      is_admin: {
-        Args: { uid: string }
-        Returns: boolean
-      }
+      get_current_user_role: { Args: never; Returns: string }
+      is_admin: { Args: { uid: string }; Returns: boolean }
       list_successor_candidates: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           email: string
           id: string
