@@ -4,11 +4,11 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { CheckCircle, Target, Plus, Edit3, Video, Loader2 } from 'lucide-react';
+import { CheckCircle, Target, Plus, Video, Loader2 } from 'lucide-react';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 import { InsightCollectionModal } from './InsightCollectionModal';
 import { ZoomMeetingModal } from './ZoomMeetingModal';
-import { ShowInsightsModal } from './ShowInsightsModal';
+
 import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 import { useHandover } from '@/hooks/useHandover';
 import { HandoverTask } from '@/types/handover';
@@ -18,7 +18,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const { tasks, loading: handoverLoading, error, updateTask, createHandoverWithTemplate } = useHandover();
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
-  const [isShowInsightsModalOpen, setIsShowInsightsModalOpen] = useState(false);
+  
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
 
   // Create handover with template on first load if no tasks exist
@@ -60,10 +60,6 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     setIsZoomModalOpen(true);
   };
 
-  const handleShowInsightsClick = (task: HandoverTask) => {
-    setSelectedTask(task);
-    setIsShowInsightsModalOpen(true);
-  };
 
   const handleSaveInsights = async (taskId: string, topic: string, insights: string, file?: File) => {
     try {
@@ -258,15 +254,6 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                             variant="outline" 
                             size="sm" 
                             className="text-xs"
-                            onClick={() => handleShowInsightsClick(task)}
-                          >
-                            <Edit3 className="h-3 w-3 mr-1" />
-                            Show Insights
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-xs"
                             onClick={() => handleRecordVideoClick(task)}
                           >
                             <Video className="h-3 w-3 mr-1" />
@@ -299,13 +286,6 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         allTasks={tasks}
       />
 
-      {/* Show Insights Modal */}
-      <ShowInsightsModal
-        isOpen={isShowInsightsModalOpen}
-        onClose={() => setIsShowInsightsModalOpen(false)}
-        task={selectedTask}
-        onEditInsight={handleEditInsight}
-      />
     </div>
   );
 };
