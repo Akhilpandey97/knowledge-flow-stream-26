@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Upload, FileText, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { HandoverTask } from '@/types/handover';
+import { HandoverTask, TaskInsight } from '@/types/handover';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FormField {
@@ -35,6 +35,7 @@ interface InsightCollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: HandoverTask | null;
+  editingInsight?: TaskInsight | null;
   onSaveAndNext: (taskId: string, topic: string, insights: string, file?: File) => void;
 }
 
@@ -42,6 +43,7 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
   isOpen,
   onClose,
   task,
+  editingInsight,
   onSaveAndNext
 }) => {
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -54,9 +56,17 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
   useEffect(() => {
     if (isOpen && task) {
       fetchFormTemplate();
-      resetForm();
+      if (editingInsight) {
+        // Pre-fill form with existing insight data
+        setFormValues({
+          topic: editingInsight.topic,
+          insights: editingInsight.content
+        });
+      } else {
+        resetForm();
+      }
     }
-  }, [isOpen, task]);
+  }, [isOpen, task, editingInsight]);
 
   const fetchFormTemplate = async () => {
     if (!task) return;
@@ -395,7 +405,7 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            Share Your Insights - {task.title}
+            {editingInsight ? 'Edit Insight' : 'Share Your Insights'} - {task.title}
           </DialogTitle>
         </DialogHeader>
 
@@ -455,7 +465,7 @@ export const InsightCollectionModal: React.FC<InsightCollectionModalProps> = ({
               disabled={isLoading}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              Add Insight
+              {editingInsight ? 'Update Insight' : 'Add Insight'}
             </Button>
           </div>
         </div>
