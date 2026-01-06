@@ -162,7 +162,9 @@ export const ZoomMeetingModal: React.FC<ZoomMeetingModalProps> = ({
           {activeTab === 'scheduled' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Upcoming Knowledge Transfer Sessions</h3>
+                <h3 className="text-lg font-semibold">
+                  {task ? `Meetings for: ${task.title}` : 'Upcoming Knowledge Transfer Sessions'}
+                </h3>
                 <Button
                   variant="outline"
                   size="sm"
@@ -174,7 +176,7 @@ export const ZoomMeetingModal: React.FC<ZoomMeetingModalProps> = ({
               </div>
 
               <div className="grid gap-4">
-                {meetings.map((meeting) => (
+                {meetings.filter(meeting => !task || meeting.taskId === task.id).map((meeting) => (
                   <Card key={meeting.id} className="border-l-4 border-l-blue-500">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -235,11 +237,13 @@ export const ZoomMeetingModal: React.FC<ZoomMeetingModalProps> = ({
                 ))}
               </div>
 
-              {meetings.length === 0 && (
+              {meetings.filter(meeting => !task || meeting.taskId === task.id).length === 0 && (
                 <Card className="text-center py-8">
                   <CardContent>
                     <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground mb-4">No meetings scheduled yet</p>
+                    <p className="text-muted-foreground mb-4">
+                      {task ? `No meetings scheduled for "${task.title}"` : 'No meetings scheduled yet'}
+                    </p>
                     <Button onClick={() => setActiveTab('create')}>
                       Schedule Your First Meeting
                     </Button>

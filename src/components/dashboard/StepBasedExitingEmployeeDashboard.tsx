@@ -227,7 +227,14 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                         )}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                           <p className="text-xs text-muted-foreground">Category: {task.category}</p>
-                          <p className="text-xs text-muted-foreground font-medium">Status: {task.status}</p>
+                          <div className="flex items-center gap-3">
+                            {task.dueDate && (
+                              <p className="text-xs text-muted-foreground">
+                                Due: <span className="font-medium">{new Date(task.dueDate).toLocaleDateString()}</span>
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground font-medium">Status: {task.status}</p>
+                          </div>
                         </div>
                         
                         {task.notes && (
@@ -236,7 +243,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                               <CheckCircle className="h-4 w-4 text-primary" />
                               <span className="text-sm font-medium">Notes Added</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">{task.notes}</p>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{task.notes}</div>
                           </div>
                         )}
                         
