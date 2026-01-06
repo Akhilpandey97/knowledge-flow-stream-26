@@ -4,22 +4,22 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { CheckCircle, Target, Plus, Video, Loader2 } from 'lucide-react';
+import { CheckCircle, Target, Plus, Video, Loader2, Edit2, Calendar, Lightbulb } from 'lucide-react';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 import { InsightCollectionModal } from './InsightCollectionModal';
 import { ZoomMeetingModal } from './ZoomMeetingModal';
 
 import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 import { useHandover } from '@/hooks/useHandover';
-import { HandoverTask } from '@/types/handover';
+import { HandoverTask, TaskInsight } from '@/types/handover';
 
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const { hasUploadedDocument, loading: uploadLoading, markDocumentUploaded } = useDocumentUpload();
   const { tasks, loading: handoverLoading, error, updateTask, createHandoverWithTemplate } = useHandover();
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
-  
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
+  const [editingInsight, setEditingInsight] = useState<TaskInsight | null>(null);
 
   // Create handover with template on first load if no tasks exist
   useEffect(() => {
@@ -63,27 +63,50 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
 
   const handleSaveInsights = async (taskId: string, topic: string, insights: string, file?: File) => {
     try {
-      const notesContent = `${topic}: ${insights}`;
+      const task = tasks.find(t => t.id === taskId);
+      const existingInsights = task?.insights || [];
+      
+      const newInsight: TaskInsight = {
+        id: editingInsight?.id || crypto.randomUUID(),
+        topic,
+        content: insights,
+        createdAt: editingInsight?.createdAt || new Date().toISOString(),
+        attachments: file ? [file.name] : undefined
+      };
+      
+      let updatedInsights: TaskInsight[];
+      if (editingInsight) {
+        // Update existing insight
+        updatedInsights = existingInsights.map(ins => 
+          ins.id === editingInsight.id ? newInsight : ins
+        );
+      } else {
+        // Add new insight
+        updatedInsights = [...existingInsights, newInsight];
+      }
+      
       await updateTask(taskId, { 
         status: 'completed',
-        notes: notesContent
+        insights: updatedInsights,
+        notes: `${topic}: ${insights}` // Keep notes for backward compatibility
       });
       
-      // Log the file if provided (in real app, upload to server)
       if (file) {
         console.log('File would be uploaded:', file.name);
       }
       
       setIsInsightModalOpen(false);
       setSelectedTask(null);
+      setEditingInsight(null);
     } catch (error) {
       console.error('Error saving insights:', error);
     }
   };
 
-  const handleEditInsight = (insight: any) => {
-    // In real app, this would open an edit modal
-    console.log('Edit insight:', insight);
+  const handleEditInsight = (task: HandoverTask, insight: TaskInsight) => {
+    setSelectedTask(task);
+    setEditingInsight(insight);
+    setIsInsightModalOpen(true);
   };
 
   const handleTaskToggle = async (taskId: string) => {
@@ -237,7 +260,46 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                           </div>
                         </div>
                         
-                        {task.notes && (
+                        {/* Display all insights */}
+                        {task.insights && task.insights.length > 0 && (
+                          <div className="space-y-2 mb-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Lightbulb className="h-4 w-4 text-primary" />
+                              <span className="text-sm font-medium">Insights ({task.insights.length})</span>
+                            </div>
+                            {task.insights.map((insight) => (
+                              <div key={insight.id} className="bg-muted/50 border rounded p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-sm font-medium text-primary">{insight.topic}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {new Date(insight.createdAt).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">{insight.content}</div>
+                                    {insight.attachments && insight.attachments.length > 0 && (
+                                      <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                                        <span>📎 {insight.attachments.join(', ')}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleEditInsight(task, insight)}
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Fallback for old notes format */}
+                        {task.notes && (!task.insights || task.insights.length === 0) && (
                           <div className="bg-muted/50 border rounded p-3 mb-3">
                             <div className="flex items-center gap-2 mb-1">
                               <CheckCircle className="h-4 w-4 text-primary" />
@@ -280,8 +342,12 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
       {/* Insight Collection Modal */}
       <InsightCollectionModal
         isOpen={isInsightModalOpen}
-        onClose={() => setIsInsightModalOpen(false)}
+        onClose={() => {
+          setIsInsightModalOpen(false);
+          setEditingInsight(null);
+        }}
         task={selectedTask}
+        editingInsight={editingInsight}
         onSaveAndNext={handleSaveInsights}
       />
 

@@ -1,3 +1,11 @@
+export interface TaskInsight {
+  id: string;
+  topic: string;
+  content: string;
+  createdAt: string;
+  attachments?: string[];
+}
+
 export interface HandoverTask {
   id: string;
   title: string;
@@ -7,6 +15,7 @@ export interface HandoverTask {
   priority: 'low' | 'medium' | 'high' | 'critical';
   dueDate?: string;
   notes?: string;
+  insights?: TaskInsight[];
   attachments?: string[];
   videoLinks?: string[];
 }
