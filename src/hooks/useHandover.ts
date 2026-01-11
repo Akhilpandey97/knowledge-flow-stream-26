@@ -193,7 +193,9 @@ export const useHandover = () => {
           status: task.status === 'done' ? 'completed' : 'pending',
           priority: getPriorityFromStatus(task.status),
           notes: '', // Will be populated from notes table
-          dueDate: task.due_date || undefined
+          dueDate: task.due_date || undefined,
+          successorAcknowledged: task.successor_acknowledged || false,
+          successorAcknowledgedAt: task.successor_acknowledged_at || undefined
         })) || [];
         
         // Fetch notes for all tasks
@@ -272,6 +274,42 @@ export const useHandover = () => {
     }
   };
 
+  const acknowledgeTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ 
+          successor_acknowledged: true,
+          successor_acknowledged_at: new Date().toISOString()
+        })
+        .eq('id', taskId);
+      
+      if (error) throw error;
+
+      // Update local state
+      setTasks(prev => prev.map(task => 
+        task.id === taskId 
+          ? { ...task, successorAcknowledged: true, successorAcknowledgedAt: new Date().toISOString() } 
+          : task
+      ));
+
+      toast({
+        title: "KT Acknowledged",
+        description: "You have acknowledged the knowledge transfer for this task.",
+      });
+
+      return true;
+    } catch (err: any) {
+      console.error('Error acknowledging task:', err);
+      toast({
+        title: "Error",
+        description: "Failed to acknowledge the task. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   const getCategoryFromTitle = (title: string): string => {
     if (title.toLowerCase().includes('client')) return 'Client Management';
     if (title.toLowerCase().includes('crm') || title.toLowerCase().includes('system')) return 'Systems & Tools';
@@ -294,6 +332,7 @@ export const useHandover = () => {
     loading,
     error,
     updateTask,
+    acknowledgeTask,
     refetch: fetchHandoverData,
     createHandoverWithTemplate
   };
