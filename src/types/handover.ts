@@ -18,6 +18,8 @@ export interface HandoverTask {
   insights?: TaskInsight[];
   attachments?: string[];
   videoLinks?: string[];
+  successorAcknowledged?: boolean;
+  successorAcknowledgedAt?: string;
 }
 
 export interface Handover {

@@ -428,6 +428,8 @@ export type Database = {
           handover_id: string | null
           id: string
           status: string | null
+          successor_acknowledged: boolean | null
+          successor_acknowledged_at: string | null
           title: string
         }
         Insert: {
@@ -437,6 +439,8 @@ export type Database = {
           handover_id?: string | null
           id?: string
           status?: string | null
+          successor_acknowledged?: boolean | null
+          successor_acknowledged_at?: string | null
           title: string
         }
         Update: {
@@ -446,6 +450,8 @@ export type Database = {
           handover_id?: string | null
           id?: string
           status?: string | null
+          successor_acknowledged?: boolean | null
+          successor_acknowledged_at?: string | null
           title?: string
         }
         Relationships: [

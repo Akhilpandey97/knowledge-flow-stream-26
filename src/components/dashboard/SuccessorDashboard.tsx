@@ -4,6 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   AlertTriangle, 
   MessageCircle, 
@@ -13,7 +14,8 @@ import {
   FileText,
   Video,
   User,
-  Loader2
+  Loader2,
+  CheckCheck
 } from 'lucide-react';
 import { ChatModal } from './ChatModal';
 import { EscalationModal } from './EscalationModal';
@@ -21,12 +23,16 @@ import { ExportButton } from '@/components/ui/export-button';
 import { SuccessorAIInsights } from './SuccessorAIInsights';
 import { useHandover } from '@/hooks/useHandover';
 import { useAuth } from '@/contexts/AuthContext';
+import { HandoverTask } from '@/types/handover';
 
 export const SuccessorDashboard: React.FC = () => {
-  const { tasks, loading, error } = useHandover();
+  const { tasks, loading, error, acknowledgeTask } = useHandover();
   const { user } = useAuth();
   const [chatModal, setChatModal] = useState(false);
   const [escalationModal, setEscalationModal] = useState(false);
+  const [notesModal, setNotesModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
+  const [acknowledgingTaskId, setAcknowledgingTaskId] = useState<string | null>(null);
 
   // Calculate metrics from real data
   const completedTasks = tasks.filter(task => task.status === 'completed');
@@ -190,16 +196,50 @@ export const SuccessorDashboard: React.FC = () => {
                 <div key={task.id} className="border rounded-lg p-4 bg-success-soft border-success/20">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-success">{task.title}</h4>
-                    <Badge variant="outline" className="text-xs border-success text-success">
-                      Completed
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {task.successorAcknowledged && (
+                        <Badge variant="outline" className="text-xs border-primary text-primary">
+                          <CheckCheck className="w-3 h-3 mr-1" />
+                          Acknowledged
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs border-success text-success">
+                        Completed
+                      </Badge>
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">Category: {task.category}</p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {task.notes && (
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedTask(task);
+                          setNotesModal(true);
+                        }}
+                      >
                         <FileText className="w-3 h-3 mr-1" />
                         View Notes
+                      </Button>
+                    )}
+                    {!task.successorAcknowledged && (
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        disabled={acknowledgingTaskId === task.id}
+                        onClick={async () => {
+                          setAcknowledgingTaskId(task.id);
+                          await acknowledgeTask(task.id);
+                          setAcknowledgingTaskId(null);
+                        }}
+                      >
+                        {acknowledgingTaskId === task.id ? (
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                          <CheckCheck className="w-3 h-3 mr-1" />
+                        )}
+                        Acknowledge KT
                       </Button>
                     )}
                   </div>
@@ -263,6 +303,36 @@ export const SuccessorDashboard: React.FC = () => {
         isOpen={escalationModal}
         onClose={() => setEscalationModal(false)}
       />
+
+      {/* Notes Modal */}
+      <Dialog open={notesModal} onOpenChange={setNotesModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Task Notes
+            </DialogTitle>
+            <DialogDescription>
+              Notes for: {selectedTask?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedTask?.notes ? (
+              <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm">
+                {selectedTask.notes}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">No notes available for this task.</p>
+            )}
+            {selectedTask?.successorAcknowledged && selectedTask.successorAcknowledgedAt && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <CheckCheck className="h-3 w-3 text-primary" />
+                Acknowledged on {new Date(selectedTask.successorAcknowledgedAt).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
