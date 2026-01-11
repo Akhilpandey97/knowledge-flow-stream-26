@@ -424,6 +424,7 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          due_date: string | null
           handover_id: string | null
           id: string
           status: string | null
@@ -432,6 +433,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
+          due_date?: string | null
           handover_id?: string | null
           id?: string
           status?: string | null
@@ -440,6 +442,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
+          due_date?: string | null
           handover_id?: string | null
           id?: string
           status?: string | null
