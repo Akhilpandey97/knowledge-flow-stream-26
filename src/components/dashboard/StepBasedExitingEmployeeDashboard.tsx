@@ -248,9 +248,9 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                         {task.description && (
                           <p className="text-muted-foreground text-sm mb-3">{task.description}</p>
                         )}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
                           <p className="text-xs text-muted-foreground">Category: {task.category}</p>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-col items-end gap-1">
                             {task.dueDate && (
                               <p className="text-xs text-muted-foreground">
                                 Due: <span className="font-medium">{new Date(task.dueDate).toLocaleDateString()}</span>
