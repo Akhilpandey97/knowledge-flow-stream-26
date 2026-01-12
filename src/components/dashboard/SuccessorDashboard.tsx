@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import { SuccessorAIInsights } from './SuccessorAIInsights';
 import { useHandover } from '@/hooks/useHandover';
 import { useAuth } from '@/contexts/AuthContext';
 import { HandoverTask } from '@/types/handover';
+import { supabase } from '@/integrations/supabase/client';
 
 export const SuccessorDashboard: React.FC = () => {
   const { tasks, loading, error, acknowledgeTask } = useHandover();
@@ -33,6 +34,53 @@ export const SuccessorDashboard: React.FC = () => {
   const [notesModal, setNotesModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
   const [acknowledgingTaskId, setAcknowledgingTaskId] = useState<string | null>(null);
+  const [handoverInfo, setHandoverInfo] = useState<{
+    handoverId: string;
+    exitingEmployeeName: string;
+    department: string;
+  } | null>(null);
+
+  // Fetch handover info including exiting employee details
+  useEffect(() => {
+    const fetchHandoverInfo = async () => {
+      if (!user) return;
+      
+      try {
+        const { data: handovers, error: handoverError } = await supabase
+          .from('handovers')
+          .select(`
+            id,
+            employee_id,
+            users!handovers_employee_id_fkey (
+              email,
+              department
+            )
+          `)
+          .eq('successor_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (handoverError) {
+          console.error('Error fetching handover info:', handoverError);
+          return;
+        }
+
+        if (handovers && handovers.length > 0) {
+          const handover = handovers[0];
+          const employeeData = handover.users as any;
+          setHandoverInfo({
+            handoverId: handover.id,
+            exitingEmployeeName: employeeData?.email?.split('@')[0] || 'Predecessor',
+            department: employeeData?.department || 'General'
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching handover info:', err);
+      }
+    };
+
+    fetchHandoverInfo();
+  }, [user]);
 
   // Calculate metrics from real data
   const completedTasks = tasks.filter(task => task.status === 'completed');
@@ -122,7 +170,12 @@ export const SuccessorDashboard: React.FC = () => {
       </Card>
 
       {/* AI Knowledge Transfer Insights */}
-      <SuccessorAIInsights />
+      <SuccessorAIInsights 
+        handoverId={handoverInfo?.handoverId}
+        tasks={tasks}
+        exitingEmployeeName={handoverInfo?.exitingEmployeeName}
+        department={handoverInfo?.department}
+      />
 
       {/* Critical Missing Items Alert */}
       {criticalGaps.length > 0 && (
