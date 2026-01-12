@@ -35,6 +35,12 @@ export const useGeneratedAIInsights = () => {
     exitingEmployeeName?: string,
     department?: string
   ) => {
+    // Prevent duplicate requests
+    if (loading) {
+      console.log('Already generating insights, skipping...');
+      return null;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -55,6 +61,10 @@ export const useGeneratedAIInsights = () => {
       }
 
       if (data?.error) {
+        // Handle rate limit error specifically
+        if (data.error.includes('429')) {
+          throw new Error('Rate limit exceeded (429). Please wait a minute before trying again.');
+        }
         throw new Error(data.error);
       }
 
@@ -66,12 +76,13 @@ export const useGeneratedAIInsights = () => {
       throw new Error('No insights returned from AI');
     } catch (err: any) {
       console.error('Error generating AI insights:', err);
-      setError(err.message || 'Failed to generate AI insights');
+      const errorMessage = err.message || 'Failed to generate AI insights';
+      setError(errorMessage);
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loading]);
 
   const clearInsights = useCallback(() => {
     setInsights(null);
