@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Loader2, RefreshCw, Sparkles, AlertCircle } from 'lucide-react';
 import { useGeneratedAIInsights, RevenueInsight, PlaybookAction, CriticalItem } from '@/hooks/useGeneratedAIInsights';
 import { HandoverTask } from '@/types/handover';
 
@@ -69,15 +69,8 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
     }
   ];
 
-  // Auto-generate insights when tasks are available
-  useEffect(() => {
-    if (tasks.length > 0 && !insights && !loading && handoverId) {
-      generateInsights(handoverId, tasks, exitingEmployeeName, department);
-    }
-  }, [tasks, insights, loading, handoverId, exitingEmployeeName, department, generateInsights]);
-
   const handleGenerateInsights = () => {
-    if (handoverId && tasks.length > 0) {
+    if (handoverId && tasks.length > 0 && !loading) {
       generateInsights(handoverId, tasks, exitingEmployeeName, department);
     }
   };
@@ -122,8 +115,13 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
       )}
 
       {error && (
-        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
-          {error}
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>
+            {error.includes('429') 
+              ? 'Rate limit exceeded. Please wait a moment before trying again.' 
+              : error}
+          </span>
         </div>
       )}
 
