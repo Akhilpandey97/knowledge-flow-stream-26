@@ -24,6 +24,12 @@ export interface GeneratedInsights {
   criticalItems: CriticalItem[];
 }
 
+export interface ConfiguredTitles {
+  revenueTitle?: string;
+  playbookTitle?: string;
+  criticalTitle?: string;
+}
+
 export const useGeneratedAIInsights = () => {
   const [insights, setInsights] = useState<GeneratedInsights | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,7 +39,8 @@ export const useGeneratedAIInsights = () => {
     handoverId: string,
     tasks: HandoverTask[],
     exitingEmployeeName?: string,
-    department?: string
+    department?: string,
+    configuredTitles?: ConfiguredTitles
   ) => {
     // Prevent duplicate requests
     if (loading) {
@@ -52,7 +59,8 @@ export const useGeneratedAIInsights = () => {
           handoverId,
           tasks,
           exitingEmployeeName,
-          department
+          department,
+          configuredTitles
         }
       });
 

@@ -50,6 +50,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_insight_config: {
+        Row: {
+          created_at: string
+          critical_title: string
+          department: string
+          id: string
+          playbook_title: string
+          revenue_title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          critical_title?: string
+          department: string
+          id?: string
+          playbook_title?: string
+          revenue_title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          critical_title?: string
+          department?: string
+          id?: string
+          playbook_title?: string
+          revenue_title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_knowledge_insights_complex: {
         Row: {
           created_at: string | null
