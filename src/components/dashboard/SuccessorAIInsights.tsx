@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Sparkles, AlertCircle } from 'lucide-react';
 import { useGeneratedAIInsights, RevenueInsight, PlaybookAction, CriticalItem } from '@/hooks/useGeneratedAIInsights';
+import { useAIInsightConfig } from '@/hooks/useAIInsightConfig';
 import { HandoverTask } from '@/types/handover';
 
 interface SuccessorAIInsightsProps {
@@ -19,6 +20,12 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
   department
 }) => {
   const { insights, loading, error, generateInsights } = useGeneratedAIInsights();
+  const { config: titleConfig, loading: titlesLoading } = useAIInsightConfig(department);
+
+  // Get configured titles or use defaults
+  const revenueTitle = titleConfig?.revenue_title || 'Revenue Growth & Retention';
+  const playbookTitle = titleConfig?.playbook_title || 'AI Successor Playbook';
+  const criticalTitle = titleConfig?.critical_title || 'Critical & Priority AI Insights';
 
   // Fallback sample data when no insights are available
   const sampleRevenueInsights: RevenueInsight[] = [
@@ -71,7 +78,12 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
 
   const handleGenerateInsights = () => {
     if (handoverId && tasks.length > 0 && !loading) {
-      generateInsights(handoverId, tasks, exitingEmployeeName, department);
+      // Pass configured titles to the edge function for use in AI prompt
+      generateInsights(handoverId, tasks, exitingEmployeeName, department, {
+        revenueTitle,
+        playbookTitle,
+        criticalTitle
+      });
     }
   };
 
@@ -133,7 +145,7 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
               <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-sm font-bold">📊</span>
               </div>
-              Revenue Growth & Retention
+              {revenueTitle}
               <div className="ml-auto">
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
                   isUsingRealData ? 'bg-primary text-primary-foreground' : 'bg-blue-100 text-blue-800'
@@ -169,7 +181,7 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-sm font-bold">🎯</span>
               </div>
-              AI Successor Playbook
+              {playbookTitle}
               <div className="ml-auto">
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
                   isUsingRealData ? 'bg-primary text-primary-foreground' : 'bg-blue-100 text-blue-800'
@@ -218,7 +230,7 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
               <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-sm font-bold">⚠️</span>
               </div>
-              Critical & Priority AI Insights
+              {criticalTitle}
               <div className="ml-auto">
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
                   isUsingRealData ? 'bg-primary text-primary-foreground' : 'bg-blue-100 text-blue-800'

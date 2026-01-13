@@ -16,10 +16,11 @@ serve(async (req) => {
   }
 
   try {
-    const { handoverId, tasks, exitingEmployeeName, department } = await req.json();
+    const { handoverId, tasks, exitingEmployeeName, department, configuredTitles } = await req.json();
     
     console.log('Generating AI insights for handover:', handoverId);
     console.log('Tasks count:', tasks?.length || 0);
+    console.log('Configured titles:', configuredTitles);
 
     if (!openAIApiKey) {
       console.error('OpenAI API key not configured');
@@ -28,6 +29,11 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Get configured titles or use defaults
+    const revenueTitle = configuredTitles?.revenueTitle || 'Revenue Growth & Retention';
+    const playbookTitle = configuredTitles?.playbookTitle || 'AI Successor Playbook';
+    const criticalTitle = configuredTitles?.criticalTitle || 'Critical & Priority AI Insights';
 
     // Prepare task summary for AI analysis
     const taskSummary = tasks?.map((task: any) => ({
@@ -56,38 +62,45 @@ HANDOVER CONTEXT:
 TASK DETAILS:
 ${JSON.stringify(taskSummary, null, 2)}
 
+The insights you generate should be tailored to the "${department || 'General'}" department context.
+Use the following section titles for your insights:
+- "${revenueTitle}" for business metrics and performance insights
+- "${playbookTitle}" for actionable next steps and recommendations  
+- "${criticalTitle}" for urgent items requiring immediate attention
+
 Based on this handover data, generate actionable AI insights in the following JSON format:
 
 {
   "revenueInsights": [
     {
-      "metric": "Key Business Metric",
+      "metric": "Key Business Metric relevant to ${department || 'the department'}",
       "value": "Quantified value or percentage",
-      "insight": "Actionable insight about revenue impact"
+      "insight": "Actionable insight about impact on ${revenueTitle}"
     }
   ],
   "playbookActions": [
     {
       "title": "Action Item Title",
-      "detail": "Specific action with timeline or impact"
+      "detail": "Specific action with timeline or impact for ${playbookTitle}"
     }
   ],
   "criticalItems": [
     {
       "title": "Critical Issue Title",
-      "insight": "Why this is critical and recommended action"
+      "insight": "Why this is critical for ${criticalTitle} and recommended action"
     }
   ]
 }
 
 INSTRUCTIONS:
-1. Generate 3 revenue/business insights based on the handover tasks
-2. Generate 3 actionable playbook items for the successor
-3. Generate 3 critical/priority items that need immediate attention
+1. Generate 3 insights for "${revenueTitle}" based on the handover tasks and department context
+2. Generate 3 actionable items for "${playbookTitle}" for the successor
+3. Generate 3 items for "${criticalTitle}" that need immediate attention
 4. Make insights specific to the actual task titles and categories provided
-5. If there are client-related tasks, mention specific client insights
-6. Focus on knowledge gaps, risks, and opportunities from the task data
-7. Be specific and actionable - avoid generic advice
+5. Tailor the language and metrics to the ${department || 'General'} department
+6. If there are client-related tasks, mention specific client insights
+7. Focus on knowledge gaps, risks, and opportunities from the task data
+8. Be specific and actionable - avoid generic advice
 
 Return ONLY valid JSON, no additional text.`;
 
