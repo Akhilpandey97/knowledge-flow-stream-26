@@ -31,9 +31,9 @@ serve(async (req) => {
     }
 
     // Get configured titles or use defaults
-    const revenueTitle = configuredTitles?.revenueTitle || 'Revenue Growth & Retention';
-    const playbookTitle = configuredTitles?.playbookTitle || 'AI Successor Playbook';
-    const criticalTitle = configuredTitles?.criticalTitle || 'Critical & Priority AI Insights';
+    const revenueTitle = configuredTitles?.revenueTitle || 'Hot Deals';
+    const playbookTitle = configuredTitles?.playbookTitle || 'Deals you can miss';
+    const criticalTitle = configuredTitles?.criticalTitle || 'Action Items for next 30 days';
 
     // Prepare task summary for AI analysis
     const taskSummary = tasks?.map((task: any) => ({
@@ -49,11 +49,11 @@ serve(async (req) => {
     const pendingTasks = taskSummary.filter((t: any) => t.status !== 'completed');
     const criticalTasks = taskSummary.filter((t: any) => t.priority === 'critical' || t.priority === 'high');
 
-    const prompt = `You are an AI assistant analyzing a knowledge transfer handover from an exiting employee to their successor.
+    const prompt = `You are a Sales Intelligence AI analyzing a knowledge transfer handover from an exiting sales employee to their successor.
 
 HANDOVER CONTEXT:
 - Exiting Employee: ${exitingEmployeeName || 'Unknown'}
-- Department: ${department || 'General'}
+- Department: ${department || 'Sales'}
 - Total Tasks: ${taskSummary.length}
 - Completed Tasks: ${completedTasks.length}
 - Pending Tasks: ${pendingTasks.length}
@@ -62,45 +62,58 @@ HANDOVER CONTEXT:
 TASK DETAILS:
 ${JSON.stringify(taskSummary, null, 2)}
 
-The insights you generate should be tailored to the "${department || 'General'}" department context.
-Use the following section titles for your insights:
-- "${revenueTitle}" for business metrics and performance insights
-- "${playbookTitle}" for actionable next steps and recommendations  
-- "${criticalTitle}" for urgent items requiring immediate attention
+Generate insights that STRICTLY match the context of these section titles:
+
+SECTION 1: "${revenueTitle}"
+- This section is about HIGH-VALUE sales opportunities that are HOT and ready to close
+- Focus on deals with high revenue potential, warm leads, accounts ready for upsell
+- Include deal values, client names from tasks, and urgency indicators
+- These are opportunities the successor should prioritize immediately
+
+SECTION 2: "${playbookTitle}"  
+- This section is about LOWER PRIORITY deals that can be deprioritized or skipped
+- Focus on deals with lower value, cold leads, or accounts that need long nurturing
+- Explain why these can wait or be given less attention
+- Help successor focus energy on high-value opportunities first
+
+SECTION 3: "${criticalTitle}"
+- This section is about SPECIFIC ACTION ITEMS for the next 30 days
+- Each item must have a clear deadline or timeframe within 30 days
+- Include concrete next steps like "Schedule call with X by Week 2", "Send proposal to Y by Day 10"
+- Focus on preventing revenue loss and maintaining client relationships
 
 Based on this handover data, generate actionable AI insights in the following JSON format:
 
 {
   "revenueInsights": [
     {
-      "metric": "Key Business Metric relevant to ${department || 'the department'}",
-      "value": "Quantified value or percentage",
-      "insight": "Actionable insight about impact on ${revenueTitle}"
+      "metric": "Deal or Opportunity Name",
+      "value": "Estimated deal value or revenue impact",
+      "insight": "Why this is a hot deal that needs immediate attention - include client context"
     }
   ],
   "playbookActions": [
     {
-      "title": "Action Item Title",
-      "detail": "Specific action with timeline or impact for ${playbookTitle}"
+      "title": "Deal or Account Name",
+      "detail": "Why this deal can be deprioritized - lower value, long sales cycle, or cold lead"
     }
   ],
   "criticalItems": [
     {
-      "title": "Critical Issue Title",
-      "insight": "Why this is critical for ${criticalTitle} and recommended action"
+      "title": "Specific Action Item with Deadline",
+      "insight": "What needs to be done in next 30 days and why - be specific about week/day"
     }
   ]
 }
 
 INSTRUCTIONS:
-1. Generate 3 insights for "${revenueTitle}" based on the handover tasks and department context
-2. Generate 3 actionable items for "${playbookTitle}" for the successor
-3. Generate 3 items for "${criticalTitle}" that need immediate attention
-4. Make insights specific to the actual task titles and categories provided
-5. Tailor the language and metrics to the ${department || 'General'} department
-6. If there are client-related tasks, mention specific client insights
-7. Focus on knowledge gaps, risks, and opportunities from the task data
-8. Be specific and actionable - avoid generic advice
+1. Generate 3 insights for "${revenueTitle}" - focus on HOT, high-value opportunities ready to close
+2. Generate 3 items for "${playbookTitle}" - focus on deals that CAN BE DEPRIORITIZED
+3. Generate 3 items for "${criticalTitle}" - focus on SPECIFIC 30-day action items with deadlines
+4. Use actual task titles, client names, and account details from the provided data
+5. If tasks mention specific clients or accounts, reference them by name
+6. Be specific with numbers, dates, and values where possible
+7. Each section must clearly match its title context - hot deals vs skippable deals vs action items
 
 Return ONLY valid JSON, no additional text.`;
 
