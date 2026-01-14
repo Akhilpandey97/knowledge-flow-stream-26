@@ -23,9 +23,9 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
   const { config: titleConfig, loading: titlesLoading } = useAIInsightConfig(department);
 
   // Get configured titles or use defaults
-  const revenueTitle = titleConfig?.revenue_title || 'Revenue Growth & Retention';
-  const playbookTitle = titleConfig?.playbook_title || 'AI Successor Playbook';
-  const criticalTitle = titleConfig?.critical_title || 'Critical & Priority AI Insights';
+  const revenueTitle = titleConfig?.revenue_title || 'Hot Deals';
+  const playbookTitle = titleConfig?.playbook_title || 'Deals you can miss';
+  const criticalTitle = titleConfig?.critical_title || 'Action Items for next 30 days';
 
   // Fallback sample data when no insights are available
   const sampleRevenueInsights: RevenueInsight[] = [
@@ -197,28 +197,12 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <>
-                {displayPlayBookActions.map((action, idx) => (
-                  <div key={idx} className="p-3 bg-primary/5 rounded-xl shadow-sm border border-primary/10">
-                    <h4 className="font-semibold text-foreground">{action.title}</h4>
-                    <p className="text-sm text-muted-foreground">{action.detail}</p>
-                  </div>
-                ))}
-                <Button 
-                  className="w-full mt-4" 
-                  onClick={handleGenerateInsights}
-                  disabled={loading || !handoverId || tasks.length === 0}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    'Generate Next Best Actions'
-                  )}
-                </Button>
-              </>
+              displayPlayBookActions.map((action, idx) => (
+                <div key={idx} className="p-3 bg-primary/5 rounded-xl shadow-sm border border-primary/10">
+                  <h4 className="font-semibold text-foreground">{action.title}</h4>
+                  <p className="text-sm text-muted-foreground">{action.detail}</p>
+                </div>
+              ))
             )}
           </CardContent>
         </Card>
