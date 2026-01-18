@@ -17,11 +17,12 @@ import {
   Loader2,
   CheckCheck
 } from 'lucide-react';
-import { ChatModal } from './ChatModal';
-import { EscalationModal } from './EscalationModal';
 import { ExportButton } from '@/components/ui/export-button';
 import { SuccessorAIInsights } from './SuccessorAIInsights';
+import { TaskHelpRequestModal } from './TaskHelpRequestModal';
+import { HelpRequestsPanel } from './HelpRequestsPanel';
 import { useHandover } from '@/hooks/useHandover';
+import { useHelpRequests } from '@/hooks/useHelpRequests';
 import { useAuth } from '@/contexts/AuthContext';
 import { HandoverTask } from '@/types/handover';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,11 +30,16 @@ import { supabase } from '@/integrations/supabase/client';
 export const SuccessorDashboard: React.FC = () => {
   const { tasks, loading, error, acknowledgeTask } = useHandover();
   const { user } = useAuth();
-  const [chatModal, setChatModal] = useState(false);
-  const [escalationModal, setEscalationModal] = useState(false);
+  const { requests: helpRequests, loading: helpLoading, createRequest, resolveRequest } = useHelpRequests('successor');
   const [notesModal, setNotesModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
   const [acknowledgingTaskId, setAcknowledgingTaskId] = useState<string | null>(null);
+  const [helpRequestModal, setHelpRequestModal] = useState<{
+    isOpen: boolean;
+    task: HandoverTask | null;
+    type: 'employee' | 'manager';
+  }>({ isOpen: false, task: null, type: 'employee' });
+  const [sendingRequest, setSendingRequest] = useState(false);
   const [handoverInfo, setHandoverInfo] = useState<{
     handoverId: string;
     exitingEmployeeName: string;
@@ -194,42 +200,20 @@ export const SuccessorDashboard: React.FC = () => {
         </Alert>
       )}
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card 
-          className="shadow-medium hover:shadow-large transition-shadow cursor-pointer group"
-          onClick={() => setChatModal(true)}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary-soft rounded-lg group-hover:bg-primary-muted transition-colors">
-                <MessageCircle className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold">Ask Employee</h3>
-                <p className="text-sm text-muted-foreground">Send questions or request clarification</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className="shadow-medium hover:shadow-large transition-shadow cursor-pointer group"
-          onClick={() => setEscalationModal(true)}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-warning-soft rounded-lg group-hover:bg-warning/20 transition-colors">
-                <HelpCircle className="h-6 w-6 text-warning" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold">Request Manager Help</h3>
-                <p className="text-sm text-muted-foreground">Escalate concerns or get additional support</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* My Help Requests */}
+      {helpRequests.length > 0 && (
+        <HelpRequestsPanel
+          requests={helpRequests}
+          loading={helpLoading}
+          onRespond={async () => false}
+          onResolve={resolveRequest}
+          title="My Help Requests"
+          description="Track your questions and escalations"
+          emptyMessage="No help requests sent yet"
+          showResolveButton={true}
+          viewerRole="successor"
+        />
+      )}
 
       {/* Completed Tasks */}
       <Card className="shadow-medium">
@@ -276,6 +260,24 @@ export const SuccessorDashboard: React.FC = () => {
                         View Notes
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setHelpRequestModal({ isOpen: true, task, type: 'employee' })}
+                      className="text-primary hover:text-primary hover:bg-primary/10"
+                    >
+                      <MessageCircle className="w-3 h-3 mr-1" />
+                      Ask Employee
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setHelpRequestModal({ isOpen: true, task, type: 'manager' })}
+                      className="text-warning hover:text-warning hover:bg-warning/10"
+                    >
+                      <HelpCircle className="w-3 h-3 mr-1" />
+                      Request Help
+                    </Button>
                     {!task.successorAcknowledged && (
                       <Button 
                         variant="default" 
@@ -337,6 +339,26 @@ export const SuccessorDashboard: React.FC = () => {
                   {task.description && (
                     <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
                   )}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setHelpRequestModal({ isOpen: true, task, type: 'employee' })}
+                      className="text-primary hover:text-primary hover:bg-primary/10"
+                    >
+                      <MessageCircle className="w-3 h-3 mr-1" />
+                      Ask Employee
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setHelpRequestModal({ isOpen: true, task, type: 'manager' })}
+                      className="text-warning hover:text-warning hover:bg-warning/10"
+                    >
+                      <HelpCircle className="w-3 h-3 mr-1" />
+                      Request Help
+                    </Button>
+                  </div>
                 </div>
               ))
             )}
@@ -344,17 +366,24 @@ export const SuccessorDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Chat Modal */}
-      <ChatModal
-        isOpen={chatModal}
-        onClose={() => setChatModal(false)}
-        exitingEmployeeName="Predecessor"
-      />
-
-      {/* Escalation Modal */}
-      <EscalationModal
-        isOpen={escalationModal}
-        onClose={() => setEscalationModal(false)}
+      {/* Task Help Request Modal */}
+      <TaskHelpRequestModal
+        isOpen={helpRequestModal.isOpen}
+        onClose={() => setHelpRequestModal({ isOpen: false, task: null, type: 'employee' })}
+        task={helpRequestModal.task}
+        requestType={helpRequestModal.type}
+        loading={sendingRequest}
+        onSubmit={async (message) => {
+          if (!helpRequestModal.task || !handoverInfo) return;
+          setSendingRequest(true);
+          await createRequest(
+            helpRequestModal.task.id,
+            handoverInfo.handoverId,
+            helpRequestModal.type,
+            message
+          );
+          setSendingRequest(false);
+        }}
       />
 
       {/* Enhanced Notes Modal */}

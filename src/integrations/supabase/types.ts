@@ -226,6 +226,66 @@ export type Database = {
           },
         ]
       }
+      help_requests: {
+        Row: {
+          created_at: string
+          handover_id: string
+          id: string
+          message: string
+          request_type: string
+          requester_id: string
+          responded_at: string | null
+          responded_by: string | null
+          response: string | null
+          status: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          handover_id: string
+          id?: string
+          message: string
+          request_type: string
+          requester_id: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response?: string | null
+          status?: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          handover_id?: string
+          id?: string
+          message?: string
+          request_type?: string
+          requester_id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response?: string | null
+          status?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_requests_handover_id_fkey"
+            columns: ["handover_id"]
+            isOneToOne: false
+            referencedRelation: "handovers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "help_requests_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insight_form_fields: {
         Row: {
           created_at: string
