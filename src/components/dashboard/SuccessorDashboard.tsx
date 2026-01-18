@@ -357,30 +357,168 @@ export const SuccessorDashboard: React.FC = () => {
         onClose={() => setEscalationModal(false)}
       />
 
-      {/* Notes Modal */}
+      {/* Enhanced Notes Modal */}
       <Dialog open={notesModal} onOpenChange={setNotesModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Task Notes
-            </DialogTitle>
-            <DialogDescription>
-              Notes for: {selectedTask?.title}
-            </DialogDescription>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="border-b pb-4">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-xl">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <DialogTitle className="text-xl font-bold text-foreground">
+                  {selectedTask?.title}
+                </DialogTitle>
+                <DialogDescription className="mt-1">
+                  <div className="flex items-center gap-3 mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {selectedTask?.category || 'General'}
+                    </Badge>
+                    <Badge 
+                      variant={selectedTask?.status === 'completed' ? 'default' : 'secondary'}
+                      className={`text-xs ${selectedTask?.status === 'completed' ? 'bg-success text-white' : ''}`}
+                    >
+                      {selectedTask?.status === 'completed' ? 'Completed' : selectedTask?.status}
+                    </Badge>
+                    {selectedTask?.priority && (
+                      <Badge 
+                        variant={selectedTask.priority === 'critical' ? 'destructive' : 'outline'}
+                        className="text-xs"
+                      >
+                        {selectedTask.priority} priority
+                      </Badge>
+                    )}
+                  </div>
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4">
-            {selectedTask?.notes ? (
-              <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm">
-                {selectedTask.notes}
+
+          <div className="flex-1 overflow-y-auto py-4 space-y-6">
+            {/* Task Description */}
+            {selectedTask?.description && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Task Overview
+                </h4>
+                <div className="bg-muted/50 border border-border rounded-xl p-4">
+                  <p className="text-sm text-foreground leading-relaxed">
+                    {selectedTask.description}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Knowledge Transfer Notes */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Knowledge Transfer Notes
+              </h4>
+              {selectedTask?.notes ? (
+                <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5">
+                  <div className="prose prose-sm max-w-none">
+                    <p className="text-foreground leading-relaxed whitespace-pre-wrap">
+                      {selectedTask.notes}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-muted/30 border border-dashed border-border rounded-xl p-8 text-center">
+                  <FileText className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
+                  <p className="text-muted-foreground">
+                    No detailed notes have been added yet.
+                  </p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">
+                    The predecessor may still be preparing documentation.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Key Insights for Successor */}
+            {selectedTask?.notes && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  What This Means For You
+                </h4>
+                <div className="bg-success/5 border border-success/20 rounded-xl p-4">
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                      <span>Review and understand the documented knowledge thoroughly</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                      <span>Note any questions or clarifications needed before handover completes</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                      <span>Acknowledge once you've fully understood the transferred knowledge</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Due Date if available */}
+            {selectedTask?.dueDate && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-warning/5 border border-warning/20 rounded-lg p-3">
+                <Clock className="h-4 w-4 text-warning" />
+                <span>Due: {new Date(selectedTask.dueDate).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Footer with acknowledgment status */}
+          <div className="border-t pt-4 mt-auto">
+            {selectedTask?.successorAcknowledged && selectedTask.successorAcknowledgedAt ? (
+              <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3">
+                <CheckCheck className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Knowledge Acknowledged</p>
+                  <p className="text-xs text-muted-foreground">
+                    You confirmed understanding on {new Date(selectedTask.successorAcknowledgedAt).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">No notes available for this task.</p>
-            )}
-            {selectedTask?.successorAcknowledged && selectedTask.successorAcknowledgedAt && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <CheckCheck className="h-3 w-3 text-primary" />
-                Acknowledged on {new Date(selectedTask.successorAcknowledgedAt).toLocaleDateString()}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Review the notes above and acknowledge when ready
+                </p>
+                <Button 
+                  onClick={async () => {
+                    if (selectedTask) {
+                      setAcknowledgingTaskId(selectedTask.id);
+                      await acknowledgeTask(selectedTask.id);
+                      setAcknowledgingTaskId(null);
+                      setNotesModal(false);
+                    }
+                  }}
+                  disabled={acknowledgingTaskId === selectedTask?.id}
+                >
+                  {acknowledgingTaskId === selectedTask?.id ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCheck className="w-4 h-4 mr-2" />
+                  )}
+                  Acknowledge KT
+                </Button>
               </div>
             )}
           </div>
