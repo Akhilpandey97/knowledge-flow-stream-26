@@ -16,17 +16,21 @@ import {
   Plus,
   Target,
   Edit,
-  Loader2
+  Loader2,
+  MessageCircle
 } from 'lucide-react';
 import { HandoverTask } from '@/types/handover';
 import { TaskDetailModal } from './TaskDetailModal';
+import { HelpRequestsPanel } from './HelpRequestsPanel';
 import { ExportButton } from '@/components/ui/export-button';
 import { useHandover } from '@/hooks/useHandover';
+import { useHelpRequests } from '@/hooks/useHelpRequests';
 import { useToast } from '@/components/ui/use-toast';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 
 export const ExitingEmployeeDashboard: React.FC = () => {
   const { tasks, loading, error, updateTask } = useHandover();
+  const { requests: employeeRequests, loading: requestsLoading, respondToRequest } = useHelpRequests('employee');
   const { toast } = useToast();
   const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
   const [newNote, setNewNote] = useState('');
@@ -176,6 +180,19 @@ export const ExitingEmployeeDashboard: React.FC = () => {
         </Button>
         <ExportButton title="Export Progress" variant="outline" size="sm" />
       </div>
+
+      {/* Help Requests from Successor */}
+      {employeeRequests.filter(r => r.request_type === 'employee').length > 0 && (
+        <HelpRequestsPanel
+          requests={employeeRequests.filter(r => r.request_type === 'employee')}
+          loading={requestsLoading}
+          onRespond={respondToRequest}
+          title="Questions from Successor"
+          description="Your successor has questions about these tasks"
+          emptyMessage="No questions from successor yet"
+          viewerRole="employee"
+        />
+      )}
 
       {/* Tasks List */}
       <div className="space-y-4">

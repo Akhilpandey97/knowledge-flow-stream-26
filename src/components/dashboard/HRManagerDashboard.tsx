@@ -19,13 +19,16 @@ import {
   Zap,
   TrendingDown,
   CheckCircle2,
-  Loader2
+  Loader2,
+  HelpCircle
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
 import { ManageHandovers } from './ManageHandovers';
+import { HelpRequestsPanel } from './HelpRequestsPanel';
 import { useHandoverStats } from '@/hooks/useHandoverStats';
 import { useHandoversList } from '@/hooks/useHandoversList';
 import { useAIInsightsForHR } from '@/hooks/useAIInsightsForHR';
+import { useHelpRequests } from '@/hooks/useHelpRequests';
 import { useAuth } from '@/contexts/AuthContext';
 
 
@@ -37,8 +40,13 @@ export const HRManagerDashboard: React.FC = () => {
   const { stats, loading: statsLoading, error: statsError } = useHandoverStats(user?.department);
   const { handovers, loading: handoversLoading, error: handoversError } = useHandoversList(user?.department);
   const { insights, loading: insightsLoading, error: insightsError } = useAIInsightsForHR();
+  const { requests: managerRequests, loading: requestsLoading, respondToRequest } = useHelpRequests('manager');
   
   const isLoading = statsLoading || handoversLoading || insightsLoading;
+  
+  // Filter manager escalations
+  const managerEscalations = managerRequests.filter(r => r.request_type === 'manager');
+  const pendingEscalations = managerEscalations.filter(r => r.status === 'pending').length;
 
   // Show loading state
   if (isLoading) {
@@ -115,6 +123,20 @@ export const HRManagerDashboard: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Manager Escalations Alert */}
+      {pendingEscalations > 0 && (
+        <Alert className="border-warning/20 bg-warning/5">
+          <HelpCircle className="h-4 w-4 text-warning" />
+          <AlertDescription>
+            <div className="flex items-center justify-between">
+              <span>
+                <strong>{pendingEscalations}</strong> pending escalation{pendingEscalations > 1 ? 's' : ''} from successors require your attention.
+              </span>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* AI Risk Alerts */}
       {stats.highRiskCount > 0 && (
@@ -331,6 +353,19 @@ export const HRManagerDashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Manager Escalations Panel */}
+      {managerEscalations.length > 0 && (
+        <HelpRequestsPanel
+          requests={managerEscalations}
+          loading={requestsLoading}
+          onRespond={respondToRequest}
+          title="Escalations from Successors"
+          description="Successors need your help with these tasks"
+          emptyMessage="No escalations at this time"
+          viewerRole="manager"
+        />
+      )}
     </div>
   );
 };
