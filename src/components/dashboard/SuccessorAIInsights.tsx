@@ -88,8 +88,17 @@ export const SuccessorAIInsights: React.FC<SuccessorAIInsightsProps> = ({
   };
 
   // Use AI-generated insights or fallback to sample data
+  // Handle both formats from API - the API might return PlaybookActions with metric/value/insight structure
   const displayRevenueInsights = insights?.revenueInsights?.length ? insights.revenueInsights : sampleRevenueInsights;
-  const displayPlayBookActions = insights?.playbookActions?.length ? insights.playbookActions : samplePlayBookActions;
+  
+  // Map playbookActions that might come in RevenueInsight format (metric, value, insight) to PlaybookAction format (title, detail)
+  const displayPlayBookActions = insights?.playbookActions?.length 
+    ? insights.playbookActions.map((action: any) => ({
+        title: action.title || action.metric || action.value || 'Action Item',
+        detail: action.detail || action.insight || ''
+      }))
+    : samplePlayBookActions;
+  
   const displayCriticalItems = insights?.criticalItems?.length ? insights.criticalItems : sampleCriticalItems;
 
   const isUsingRealData = !!insights;
