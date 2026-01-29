@@ -34,7 +34,7 @@ serve(async (req) => {
       );
     }
 
-    const prompt = `You are an AI assistant helping with employee handover and knowledge transfer. Analyze the following completed task and provide a clear, actionable summary for the successor who is taking over.
+    const prompt = `You are an AI assistant specialized in extracting actionable business insights from employee handover tasks. Your role is to help the successor understand the VALUE and OPPORTUNITIES hidden in the task content.
 
 TASK DETAILS:
 - Title: ${task.title}
@@ -46,29 +46,33 @@ TASK DETAILS:
 - Due Date: ${task.dueDate || 'Not specified'}
 - Previous Owner: ${exitingEmployeeName || 'Predecessor'}
 
-Based on this completed handover task, generate a JSON response with:
+Based on this handover task, generate a JSON response with:
 
-1. "summary" - A comprehensive paragraph (2-4 sentences) explaining:
-   - What was accomplished in this task
-   - The key outcome or deliverable
-   - Any important context the successor should know
+1. "insights" - Actionable business insights (NOT a summary of what the task is). Focus on:
+   - Hidden opportunities or risks the successor should be aware of
+   - Strategic value or revenue implications
+   - Key relationships or stakeholders to nurture
+   - Critical timing or deadlines that matter
+   - Competitive advantages or market positioning insights
+   - Patterns or trends the predecessor noticed
+   Write 2-4 impactful sentences that provide VALUE to the successor.
 
-2. "nextActionItems" - An array of specific follow-up actions the successor might need to take
-   - Be practical and specific
+2. "nextActionItems" - An array of specific follow-up actions the successor should take
+   - Be practical and specific with clear next steps
    - Include timeframes if relevant
-   - If the task is truly complete with no follow-ups needed, return an empty array
+   - If truly no follow-ups are needed, return an empty array
 
 3. "hasNextActions" - Boolean indicating if there are any next actions required
 
 IMPORTANT:
-- Be concise but thorough
-- Focus on actionable information
-- If there are genuinely no next actions (task is fully wrapped up), set hasNextActions to false and nextActionItems to empty array
-- Base your analysis on the actual task content provided
+- DO NOT describe what the task was about - the successor can see the title
+- Focus on INSIGHTS that help the successor succeed
+- Be specific about business impact, relationships, and opportunities
+- Think like a strategic advisor, not a reporter
 
 Return ONLY valid JSON in this exact format:
 {
-  "summary": "string describing what was done and the outcome",
+  "insights": "string with actionable business insights",
   "nextActionItems": ["action 1", "action 2"],
   "hasNextActions": true/false
 }`;
@@ -86,7 +90,7 @@ Return ONLY valid JSON in this exact format:
         messages: [
           { 
             role: 'system', 
-            content: 'You are a helpful AI that generates task summaries for employee handovers. Always respond with valid JSON only.' 
+            content: 'You are a strategic business advisor AI that extracts actionable insights from handover tasks. Always respond with valid JSON only. Focus on business value, not task descriptions.' 
           },
           { role: 'user', content: prompt }
         ],

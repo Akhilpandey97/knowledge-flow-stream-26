@@ -20,7 +20,7 @@ interface TaskAISummaryModalProps {
 }
 
 interface AISummary {
-  summary: string;
+  insights: string;
   nextActionItems: string[];
   hasNextActions: boolean;
 }
@@ -102,7 +102,7 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
             </div>
             <div className="flex-1">
               <DialogTitle className="text-xl font-bold text-foreground">
-                AI Summary
+                AI Insights
               </DialogTitle>
               <DialogDescription className="mt-1">
                 <div className="flex items-center gap-2 mt-2">
@@ -147,19 +147,19 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
 
           {summary && (
             <>
-              {/* Summary Section */}
+              {/* Insights Section */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-success/10 rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-success" />
+                  <div className="p-1.5 bg-primary/10 rounded-lg">
+                    <Sparkles className="h-4 w-4 text-primary" />
                   </div>
                   <h4 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                    Summary
+                    Key Insights
                   </h4>
                 </div>
-                <div className="bg-success/5 border border-success/20 rounded-xl p-5">
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-5">
                   <p className="text-foreground leading-relaxed">
-                    {summary.summary}
+                    {summary.insights}
                   </p>
                 </div>
               </div>
