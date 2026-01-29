@@ -15,11 +15,13 @@ import {
   Video,
   User,
   Loader2,
-  CheckCheck
+  CheckCheck,
+  Sparkles
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
 import { SuccessorAIInsights } from './SuccessorAIInsights';
 import { TaskHelpRequestModal } from './TaskHelpRequestModal';
+import { TaskAISummaryModal } from './TaskAISummaryModal';
 import { HelpRequestsPanel } from './HelpRequestsPanel';
 import { useHandover } from '@/hooks/useHandover';
 import { useHelpRequests } from '@/hooks/useHelpRequests';
@@ -40,6 +42,10 @@ export const SuccessorDashboard: React.FC = () => {
     type: 'employee' | 'manager';
   }>({ isOpen: false, task: null, type: 'employee' });
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [aiSummaryModal, setAiSummaryModal] = useState<{
+    isOpen: boolean;
+    task: HandoverTask | null;
+  }>({ isOpen: false, task: null });
   const [handoverInfo, setHandoverInfo] = useState<{
     handoverId: string;
     exitingEmployeeName: string;
@@ -247,6 +253,15 @@ export const SuccessorDashboard: React.FC = () => {
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">Category: {task.category}</p>
                   <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="soft"
+                      size="sm"
+                      onClick={() => setAiSummaryModal({ isOpen: true, task })}
+                      className="gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      AI Summary
+                    </Button>
                     {task.notes && (
                       <Button 
                         variant="outline" 
@@ -366,6 +381,14 @@ export const SuccessorDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Task AI Summary Modal */}
+      <TaskAISummaryModal
+        isOpen={aiSummaryModal.isOpen}
+        onClose={() => setAiSummaryModal({ isOpen: false, task: null })}
+        task={aiSummaryModal.task}
+        exitingEmployeeName={handoverInfo?.exitingEmployeeName}
+      />
+
       {/* Task Help Request Modal */}
       <TaskHelpRequestModal
         isOpen={helpRequestModal.isOpen}
@@ -386,7 +409,6 @@ export const SuccessorDashboard: React.FC = () => {
         }}
       />
 
-      {/* Enhanced Notes Modal */}
       <Dialog open={notesModal} onOpenChange={setNotesModal}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="border-b pb-4">
