@@ -110,6 +110,44 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_task_insights: {
+        Row: {
+          created_at: string
+          has_next_actions: boolean
+          id: string
+          insights: string
+          next_action_items: Json
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          has_next_actions?: boolean
+          id?: string
+          insights: string
+          next_action_items?: Json
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          has_next_actions?: boolean
+          id?: string
+          insights?: string
+          next_action_items?: Json
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_task_insights_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: true
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklist_template_tasks: {
         Row: {
           category: string

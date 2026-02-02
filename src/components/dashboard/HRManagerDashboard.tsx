@@ -354,18 +354,16 @@ export const HRManagerDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Manager Escalations Panel */}
-      {managerEscalations.length > 0 && (
-        <HelpRequestsPanel
-          requests={managerEscalations}
-          loading={requestsLoading}
-          onRespond={respondToRequest}
-          title="Escalations from Successors"
-          description="Successors need your help with these tasks"
-          emptyMessage="No escalations at this time"
-          viewerRole="manager"
-        />
-      )}
+      {/* Manager Escalations Panel - Always show */}
+      <HelpRequestsPanel
+        requests={managerEscalations}
+        loading={requestsLoading}
+        onRespond={respondToRequest}
+        title="Escalations from Successors"
+        description="Successors need your help with these tasks"
+        emptyMessage="No escalations at this time. Escalations from successors will appear here."
+        viewerRole="manager"
+      />
     </div>
   );
 };

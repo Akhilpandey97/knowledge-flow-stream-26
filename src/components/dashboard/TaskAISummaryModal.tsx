@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle, ArrowRight, RefreshCw, Database } from 'lucide-react';
 import { HandoverTask } from '@/types/handover';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,6 +25,16 @@ interface AISummary {
   hasNextActions: boolean;
 }
 
+interface CachedInsight {
+  id: string;
+  task_id: string;
+  insights: string;
+  next_action_items: string[];
+  has_next_actions: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
   isOpen,
   onClose,
@@ -34,12 +44,72 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<AISummary | null>(null);
+  const [isCached, setIsCached] = useState(false);
 
-  const generateSummary = async () => {
+  // Check for cached insights first
+  const checkCachedInsights = async (taskId: string): Promise<CachedInsight | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('ai_task_insights')
+        .select('*')
+        .eq('task_id', taskId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking cached insights:', error);
+        return null;
+      }
+
+      return data as CachedInsight | null;
+    } catch (err) {
+      console.error('Error checking cache:', err);
+      return null;
+    }
+  };
+
+  // Save insights to cache
+  const cacheInsights = async (taskId: string, insights: AISummary) => {
+    try {
+      const { error } = await supabase
+        .from('ai_task_insights')
+        .upsert({
+          task_id: taskId,
+          insights: insights.insights,
+          next_action_items: insights.nextActionItems,
+          has_next_actions: insights.hasNextActions
+        }, { onConflict: 'task_id' });
+
+      if (error) {
+        console.error('Error caching insights:', error);
+      }
+    } catch (err) {
+      console.error('Error saving to cache:', err);
+    }
+  };
+
+  const generateSummary = async (forceRegenerate: boolean = false) => {
     if (!task) return;
 
     setLoading(true);
     setError(null);
+    setIsCached(false);
+
+    // Check cache first (unless force regenerating)
+    if (!forceRegenerate) {
+      const cached = await checkCachedInsights(task.id);
+      if (cached) {
+        setSummary({
+          insights: cached.insights,
+          nextActionItems: cached.next_action_items || [],
+          hasNextActions: cached.has_next_actions
+        });
+        setIsCached(true);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Generate new insights
     setSummary(null);
 
     try {
@@ -72,6 +142,9 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
 
       if (data?.summary) {
         setSummary(data.summary);
+        // Cache the new insights
+        await cacheInsights(task.id, data.summary);
+        setIsCached(false);
       } else {
         throw new Error('No summary returned from AI');
       }
@@ -85,10 +158,11 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
 
   useEffect(() => {
     if (isOpen && task) {
-      generateSummary();
+      generateSummary(false);
     } else {
       setSummary(null);
       setError(null);
+      setIsCached(false);
     }
   }, [isOpen, task?.id]);
 
@@ -110,6 +184,12 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
                   <Badge variant="outline" className="text-xs font-medium">
                     {task?.title}
                   </Badge>
+                  {isCached && (
+                    <Badge variant="secondary" className="text-xs gap-1">
+                      <Database className="h-3 w-3" />
+                      Cached
+                    </Badge>
+                  )}
                 </div>
               </DialogDescription>
             </div>
@@ -124,7 +204,7 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
                 <Loader2 className="h-12 w-12 animate-spin text-primary relative" />
               </div>
               <p className="text-muted-foreground mt-4 text-sm">
-                Generating AI summary...
+                {isCached ? 'Loading cached insights...' : 'Generating AI insights...'}
               </p>
             </div>
           )}
@@ -135,7 +215,7 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
                 <p className="text-destructive font-medium mb-4">{error}</p>
                 <Button 
                   variant="outline" 
-                  onClick={generateSummary}
+                  onClick={() => generateSummary(true)}
                   className="gap-2"
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -213,13 +293,14 @@ export const TaskAISummaryModal: React.FC<TaskAISummaryModalProps> = ({
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
             Powered by AI
+            {isCached && <span className="ml-1">(cached)</span>}
           </div>
           <div className="flex gap-2">
             {summary && (
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={generateSummary}
+                onClick={() => generateSummary(true)}
                 disabled={loading}
                 className="gap-1"
               >
