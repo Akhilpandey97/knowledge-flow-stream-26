@@ -19,6 +19,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
+import { ExpandableText } from '@/components/ui/expandable-text';
 import { SuccessorAIInsights } from './SuccessorAIInsights';
 import { TaskHelpRequestModal } from './TaskHelpRequestModal';
 import { TaskAISummaryModal } from './TaskAISummaryModal';
@@ -470,9 +471,7 @@ export const SuccessorDashboard: React.FC = () => {
               {selectedTask?.notes ? (
                 <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5">
                   <div className="prose prose-sm max-w-none">
-                    <p className="text-foreground leading-relaxed whitespace-pre-wrap">
-                      {selectedTask.notes}
-                    </p>
+                    <ExpandableText text={selectedTask.notes} maxLines={5} />
                   </div>
                 </div>
               ) : (

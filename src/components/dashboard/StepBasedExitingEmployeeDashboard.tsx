@@ -4,18 +4,21 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { CheckCircle, Target, Plus, Video, Loader2, Edit2, Calendar, Lightbulb } from 'lucide-react';
+import { CheckCircle, Target, Plus, Video, Loader2, Edit2, Calendar, Lightbulb, MessageCircle } from 'lucide-react';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 import { InsightCollectionModal } from './InsightCollectionModal';
 import { ZoomMeetingModal } from './ZoomMeetingModal';
+import { HelpRequestsPanel } from './HelpRequestsPanel';
 
 import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 import { useHandover } from '@/hooks/useHandover';
+import { useHelpRequests } from '@/hooks/useHelpRequests';
 import { HandoverTask, TaskInsight } from '@/types/handover';
 
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const { hasUploadedDocument, loading: uploadLoading, markDocumentUploaded } = useDocumentUpload();
   const { tasks, loading: handoverLoading, error, updateTask, createHandoverWithTemplate } = useHandover();
+  const { requests: employeeRequests, loading: requestsLoading, respondToRequest } = useHelpRequests('employee');
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
@@ -207,6 +210,17 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Help Requests from Successor */}
+        <HelpRequestsPanel
+          requests={employeeRequests.filter(r => r.request_type === 'employee')}
+          loading={requestsLoading}
+          onRespond={respondToRequest}
+          title="Questions from Successor"
+          description="Your successor has questions about these tasks"
+          emptyMessage="No questions from your successor yet. They'll appear here when asked."
+          viewerRole="employee"
+        />
 
         {/* Knowledge Transfer Checklist */}
         <Card>
