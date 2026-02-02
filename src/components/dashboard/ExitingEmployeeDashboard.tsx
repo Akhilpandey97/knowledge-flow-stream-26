@@ -181,18 +181,16 @@ export const ExitingEmployeeDashboard: React.FC = () => {
         <ExportButton title="Export Progress" variant="outline" size="sm" />
       </div>
 
-      {/* Help Requests from Successor */}
-      {employeeRequests.filter(r => r.request_type === 'employee').length > 0 && (
-        <HelpRequestsPanel
-          requests={employeeRequests.filter(r => r.request_type === 'employee')}
-          loading={requestsLoading}
-          onRespond={respondToRequest}
-          title="Questions from Successor"
-          description="Your successor has questions about these tasks"
-          emptyMessage="No questions from successor yet"
-          viewerRole="employee"
-        />
-      )}
+      {/* Help Requests from Successor - Always show */}
+      <HelpRequestsPanel
+        requests={employeeRequests.filter(r => r.request_type === 'employee')}
+        loading={requestsLoading}
+        onRespond={respondToRequest}
+        title="Questions from Successor"
+        description="Your successor has questions about these tasks"
+        emptyMessage="No questions from your successor yet. They'll appear here when asked."
+        viewerRole="employee"
+      />
 
       {/* Tasks List */}
       <div className="space-y-4">
