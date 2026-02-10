@@ -4,21 +4,28 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   BarChart3, Users, AlertTriangle, TrendingUp, Brain, Sparkles, Target, 
   UserCheck, UserX, TrendingDown, CheckCircle2, Loader2, HelpCircle,
-  Search, ChevronDown, ChevronUp, Zap, ArrowRight, Clock, Mail
+  Search, ChevronDown, ChevronUp, Zap, ArrowRight, Clock, Mail, Plus, UserPlus
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
-import { ManageHandovers } from './ManageHandovers';
 import { HelpRequestsPanel } from './HelpRequestsPanel';
 import { useHandoverStats } from '@/hooks/useHandoverStats';
 import { useHandoversList } from '@/hooks/useHandoversList';
 import { useAIInsightsForHR } from '@/hooks/useAIInsightsForHR';
 import { useHelpRequests } from '@/hooks/useHelpRequests';
+import { useUsersManagement } from '@/hooks/useUsersManagement';
+import { useRealHandovers } from '@/hooks/useRealHandovers';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+const departments = ['Sales', 'Engineering', 'Finance', 'Marketing', 'HR', 'Operations'];
 
 // --- Sub-components ---
 
@@ -123,45 +130,100 @@ const HandoverRow: React.FC<{ handover: any; expanded: boolean; onToggle: () => 
 // --- Main Component ---
 
 export const HRManagerDashboard: React.FC = () => {
-  const [showManageHandovers, setShowManageHandovers] = useState(false);
   const [expandedHandover, setExpandedHandover] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const { user } = useAuth();
+  const { toast } = useToast();
 
+  // Data hooks
   const { stats, loading: statsLoading, error: statsError } = useHandoverStats(user?.department);
   const { handovers, loading: handoversLoading, error: handoversError } = useHandoversList(user?.department);
   const { insights, loading: insightsLoading, error: insightsError } = useAIInsightsForHR();
   const { requests: managerRequests, loading: requestsLoading, respondToRequest } = useHelpRequests('manager');
+  const { users, refetch: refetchUsers } = useUsersManagement();
+  const { createHandover } = useRealHandovers();
 
   const isLoading = statsLoading || handoversLoading || insightsLoading;
   const managerEscalations = managerRequests.filter(r => r.request_type === 'manager');
   const pendingEscalations = managerEscalations.filter(r => r.status === 'pending').length;
 
-  // Derived data for overview
+  // Handover creation state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAddExitingModalOpen, setIsAddExitingModalOpen] = useState(false);
+  const [isAddSuccessorModalOpen, setIsAddSuccessorModalOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [formData, setFormData] = useState({ exitingEmployee: '', successor: '', department: '' });
+  const [newUserData, setNewUserData] = useState({ email: '', role: '', department: '', password: '' });
+
+  const exitingEmployees = users.filter(u => u.role === 'exiting');
+  const successors = users.filter(u => u.role === 'successor');
+  const filteredSuccessors = successors.filter(u => 
+    u.id !== formData.exitingEmployee && (!formData.department || u.department === formData.department)
+  );
+
+  // Derived data
   const needsAttention = useMemo(() => {
     const noSuccessor = handovers.filter(h => !h.successorEmail);
     const lowProgress = handovers.filter(h => h.progress < 30 && h.successorEmail);
     return { noSuccessor, lowProgress };
   }, [handovers]);
 
-  // Filtered handovers for the Handovers tab
   const filteredHandovers = useMemo(() => {
     let list = handovers;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(h => 
-        h.exitingEmployee.toLowerCase().includes(q) || 
-        h.successor.toLowerCase().includes(q) || 
-        h.exitingEmployeeEmail.toLowerCase().includes(q) ||
-        (h.successorEmail || '').toLowerCase().includes(q)
+        h.exitingEmployee.toLowerCase().includes(q) || h.successor.toLowerCase().includes(q) || 
+        h.exitingEmployeeEmail.toLowerCase().includes(q) || (h.successorEmail || '').toLowerCase().includes(q)
       );
     }
-    if (statusFilter !== 'all') {
-      list = list.filter(h => h.status === statusFilter);
-    }
+    if (statusFilter !== 'all') list = list.filter(h => h.status === statusFilter);
     return list;
   }, [handovers, searchQuery, statusFilter]);
+
+  // Handlers
+  const handleCreateHandover = async () => {
+    if (!formData.exitingEmployee) {
+      toast({ title: "Error", description: "Please select an exiting employee", variant: "destructive" });
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const result = await createHandover(formData.exitingEmployee, formData.successor || undefined);
+      if (result.error) throw new Error(result.error);
+      toast({ title: "Success", description: "Handover created successfully!" });
+      setIsCreateModalOpen(false);
+      setFormData({ exitingEmployee: '', successor: '', department: '' });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to create handover", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddUser = async (role: 'exiting' | 'successor') => {
+    if (!newUserData.email || !newUserData.role || !newUserData.department || !newUserData.password) {
+      toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const { error: emailError } = await supabase.functions.invoke('send-signup-email', {
+        body: { email: newUserData.email, role: newUserData.role, department: newUserData.department, password: newUserData.password },
+      });
+      if (emailError) throw emailError;
+      toast({ title: "Success", description: `${role === 'exiting' ? 'Exiting employee' : 'Successor'} invited successfully!` });
+      setNewUserData({ email: '', role: '', department: '', password: '' });
+      if (role === 'exiting') setIsAddExitingModalOpen(false);
+      else setIsAddSuccessorModalOpen(false);
+      refetchUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to add user", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -172,10 +234,6 @@ export const HRManagerDashboard: React.FC = () => {
         </div>
       </div>
     );
-  }
-
-  if (showManageHandovers) {
-    return <ManageHandovers onBack={() => setShowManageHandovers(false)} />;
   }
 
   const hasErrors = statsError || handoversError || insightsError;
@@ -197,12 +255,140 @@ export const HRManagerDashboard: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <ExportButton title="Export Report" />
-            <Button onClick={() => setShowManageHandovers(true)} size="sm">
-              <Users className="w-4 h-4 mr-1.5" />
-              Create Handovers
-            </Button>
+
+            {/* Create Handover Dialog */}
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  New Handover
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Handover</DialogTitle>
+                  <DialogDescription>Set up a new knowledge transfer process</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Exiting Employee</Label>
+                    <Select value={formData.exitingEmployee} onValueChange={(v) => setFormData({...formData, exitingEmployee: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select exiting employee" /></SelectTrigger>
+                      <SelectContent>
+                        {exitingEmployees.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} - {u.department || 'No Dept'}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Successor (Optional)</Label>
+                    <Select value={formData.successor} onValueChange={(v) => setFormData({...formData, successor: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select successor" /></SelectTrigger>
+                      <SelectContent>
+                        {filteredSuccessors.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} - {u.department || 'No Dept'}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button onClick={handleCreateHandover} className="flex-1" disabled={actionLoading || !formData.exitingEmployee}>
+                      {actionLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create Handover'}
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add Exiting Employee Dialog */}
+            <Dialog open={isAddExitingModalOpen} onOpenChange={setIsAddExitingModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm"><UserPlus className="w-4 h-4 mr-1.5" />Add Employee</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Exiting Employee</DialogTitle>
+                  <DialogDescription>Add a departing employee and send them a signup email</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Email Address</Label>
+                    <Input type="email" value={newUserData.email} onChange={(e) => setNewUserData({...newUserData, email: e.target.value})} placeholder="employee@company.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Role</Label>
+                    <Select value={newUserData.role} onValueChange={(v) => setNewUserData({...newUserData, role: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                      <SelectContent><SelectItem value="exiting">Exiting Employee</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Department</Label>
+                    <Select value={newUserData.department} onValueChange={(v) => setNewUserData({...newUserData, department: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                      <SelectContent>{departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password</Label>
+                    <Input type="password" value={newUserData.password} onChange={(e) => setNewUserData({...newUserData, password: e.target.value})} placeholder="Enter password" />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button onClick={() => handleAddUser('exiting')} className="flex-1" disabled={actionLoading}>
+                      {actionLoading ? 'Adding...' : 'Add & Send Email'}
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsAddExitingModalOpen(false)}>Cancel</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add Successor Dialog */}
+            <Dialog open={isAddSuccessorModalOpen} onOpenChange={setIsAddSuccessorModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm"><UserPlus className="w-4 h-4 mr-1.5" />Add Successor</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Successor</DialogTitle>
+                  <DialogDescription>Add a new successor and send them a signup email</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Email Address</Label>
+                    <Input type="email" value={newUserData.email} onChange={(e) => setNewUserData({...newUserData, email: e.target.value})} placeholder="successor@company.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Role</Label>
+                    <Select value={newUserData.role} onValueChange={(v) => setNewUserData({...newUserData, role: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                      <SelectContent><SelectItem value="successor">Successor</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Department</Label>
+                    <Select value={newUserData.department} onValueChange={(v) => setNewUserData({...newUserData, department: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                      <SelectContent>{departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password</Label>
+                    <Input type="password" value={newUserData.password} onChange={(e) => setNewUserData({...newUserData, password: e.target.value})} placeholder="Enter password" />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button onClick={() => handleAddUser('successor')} className="flex-1" disabled={actionLoading}>
+                      {actionLoading ? 'Adding...' : 'Add & Send Email'}
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsAddSuccessorModalOpen(false)}>Cancel</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -242,7 +428,6 @@ export const HRManagerDashboard: React.FC = () => {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-5">
-          {/* Needs Attention */}
           {attentionCount > 0 && (
             <Card className="border-warning/30 bg-warning/5">
               <CardContent className="p-4 space-y-3">
@@ -277,7 +462,7 @@ export const HRManagerDashboard: React.FC = () => {
             </Card>
           )}
 
-          {/* AI Insights - horizontal scroll */}
+          {/* AI Insights */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Brain className="h-4 w-4 text-primary" />
@@ -296,24 +481,9 @@ export const HRManagerDashboard: React.FC = () => {
 
           {/* Quick Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card className="bg-card">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-foreground">{stats.inProgressHandovers}</div>
-                <div className="text-xs text-muted-foreground">In Progress</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-foreground">{handovers.filter(h => h.status === 'review').length}</div>
-                <div className="text-xs text-muted-foreground">In Review</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-success">{stats.completedHandovers}</div>
-                <div className="text-xs text-muted-foreground">Completed</div>
-              </CardContent>
-            </Card>
+            <Card className="bg-card"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-foreground">{stats.inProgressHandovers}</div><div className="text-xs text-muted-foreground">In Progress</div></CardContent></Card>
+            <Card className="bg-card"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-foreground">{handovers.filter(h => h.status === 'review').length}</div><div className="text-xs text-muted-foreground">In Review</div></CardContent></Card>
+            <Card className="bg-card"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-success">{stats.completedHandovers}</div><div className="text-xs text-muted-foreground">Completed</div></CardContent></Card>
           </div>
         </TabsContent>
 
@@ -322,17 +492,10 @@ export const HRManagerDashboard: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search by name or email..." 
-                value={searchQuery} 
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+              <Input placeholder="Search by name or email..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="in-progress">In Progress</SelectItem>
@@ -341,16 +504,10 @@ export const HRManagerDashboard: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             {filteredHandovers.length > 0 ? (
               filteredHandovers.map(h => (
-                <HandoverRow 
-                  key={h.id} 
-                  handover={h} 
-                  expanded={expandedHandover === h.id}
-                  onToggle={() => setExpandedHandover(expandedHandover === h.id ? null : h.id)}
-                />
+                <HandoverRow key={h.id} handover={h} expanded={expandedHandover === h.id} onToggle={() => setExpandedHandover(expandedHandover === h.id ? null : h.id)} />
               ))
             ) : (
               <div className="text-center py-12 text-muted-foreground">
@@ -363,15 +520,7 @@ export const HRManagerDashboard: React.FC = () => {
 
         {/* Escalations Tab */}
         <TabsContent value="escalations">
-          <HelpRequestsPanel
-            requests={managerEscalations}
-            loading={requestsLoading}
-            onRespond={respondToRequest}
-            title="Escalations from Successors"
-            description="Successors need your help with these tasks"
-            emptyMessage="No escalations at this time."
-            viewerRole="manager"
-          />
+          <HelpRequestsPanel requests={managerEscalations} loading={requestsLoading} onRespond={respondToRequest} title="Escalations from Successors" description="Successors need your help with these tasks" emptyMessage="No escalations at this time." viewerRole="manager" />
         </TabsContent>
       </Tabs>
     </div>
