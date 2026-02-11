@@ -101,13 +101,18 @@ export const SuccessorDashboard: React.FC = () => {
   const totalTasks = tasks.length;
   const progressPercentage = totalTasks > 0 ? Math.round(completedTasks.length / totalTasks * 100) : 0;
 
+  // Check if all completed tasks are acknowledged
+  const allAcknowledged = completedTasks.length > 0 && completedTasks.every(t => t.successorAcknowledged);
+  const allTasksDone = totalTasks > 0 && completedTasks.length === totalTasks;
+  const readyForApproval = allTasksDone && allAcknowledged;
+
   // Mock critical gaps - in real app, this would be calculated from AI analysis
   const criticalGaps = pendingTasks
     .filter(task => task.priority === 'critical')
     .slice(0, 3)
     .map(task => task.title);
 
-  const daysUntilTarget = 10; // Mock value, in real app calculate from handover data
+  const daysUntilTarget = 10;
 
   if (loading) {
     return (
@@ -182,6 +187,34 @@ export const SuccessorDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* KT Approval Request */}
+      {readyForApproval && handoverInfo && (
+        <Card className="border-primary/30 bg-primary/5 shadow-medium">
+          <CardContent className="p-6 text-center space-y-4">
+            <CheckCheck className="h-10 w-10 text-primary mx-auto" />
+            <div>
+              <h3 className="text-lg font-bold text-foreground">All Tasks Acknowledged!</h3>
+              <p className="text-sm text-muted-foreground">You've acknowledged all knowledge transfer items. Request manager approval to close this handover.</p>
+            </div>
+            <Button
+              onClick={async () => {
+                // Create a manager help request to approve KT
+                await createRequest(
+                  tasks[0].id,
+                  handoverInfo.handoverId,
+                  'manager',
+                  `All ${totalTasks} tasks have been acknowledged by the successor. Requesting approval to close the handover for ${handoverInfo.exitingEmployeeName}.`
+                );
+              }}
+              className="gap-2"
+            >
+              <CheckCheck className="h-4 w-4" />
+              Request KT Approval from Manager
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* AI Knowledge Transfer Insights */}
       <SuccessorAIInsights 
         handoverId={handoverInfo?.handoverId}
@@ -207,20 +240,7 @@ export const SuccessorDashboard: React.FC = () => {
         </Alert>
       )}
 
-      {/* My Help Requests */}
-      {helpRequests.length > 0 && (
-        <HelpRequestsPanel
-          requests={helpRequests}
-          loading={helpLoading}
-          onRespond={async () => false}
-          onResolve={resolveRequest}
-          title="My Help Requests"
-          description="Track your questions and escalations"
-          emptyMessage="No help requests sent yet"
-          showResolveButton={true}
-          viewerRole="successor"
-        />
-      )}
+      {/* Help requests are now shown inline within each task card */}
 
       {/* Completed Tasks */}
       <Card className="shadow-medium">
@@ -252,7 +272,27 @@ export const SuccessorDashboard: React.FC = () => {
                       </Badge>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">Category: {task.category}</p>
+                  <p className="text-sm text-muted-foreground mb-2">Category: {task.category}</p>
+                  {/* Task-specific Help Requests */}
+                  {(() => {
+                    const taskReqs = helpRequests.filter(r => r.task_id === task.id);
+                    if (taskReqs.length === 0) return null;
+                    return (
+                      <div className="bg-primary/5 border border-primary/20 rounded p-3 mb-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-xs font-medium">Help Requests ({taskReqs.length})</span>
+                        </div>
+                        {taskReqs.map(req => (
+                          <div key={req.id} className="text-xs border-b last:border-b-0 py-1.5 space-y-1">
+                            <p className="text-foreground">{req.message}</p>
+                            {req.response && <p className="text-success italic">↳ {req.response}</p>}
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   <div className="flex flex-wrap gap-2">
                     <Button
                       variant="soft"
@@ -355,6 +395,26 @@ export const SuccessorDashboard: React.FC = () => {
                   {task.description && (
                     <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
                   )}
+                  {/* Task-specific Help Requests */}
+                  {(() => {
+                    const taskReqs = helpRequests.filter(r => r.task_id === task.id);
+                    if (taskReqs.length === 0) return null;
+                    return (
+                      <div className="bg-primary/5 border border-primary/20 rounded p-3 mb-3 mt-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-xs font-medium">Help Requests ({taskReqs.length})</span>
+                        </div>
+                        {taskReqs.map(req => (
+                          <div key={req.id} className="text-xs border-b last:border-b-0 py-1.5 space-y-1">
+                            <p className="text-foreground">{req.message}</p>
+                            {req.response && <p className="text-success italic">↳ {req.response}</p>}
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   <div className="flex flex-wrap gap-2 mt-3">
                     <Button
                       variant="ghost"
