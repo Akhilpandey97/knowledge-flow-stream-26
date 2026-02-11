@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserCheck, UserPlus, Settings, Activity, RefreshCw, CheckSquare, FileText, Sparkles } from 'lucide-react';
+import { Users, UserCheck, UserPlus, Settings, CheckSquare, FileText, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { AdminStats } from '@/components/admin/AdminStats';
-import { IntegrationsManager } from '@/components/admin/IntegrationsManager';
-import { HandoverAuthSyncManager } from '@/components/admin/HandoverAuthSyncManager';
-import { ActivityLog } from '@/components/admin/ActivityLog';
 import ChecklistBuilder from '@/components/admin/ChecklistBuilder';
 import InsightFormBuilder from '@/components/admin/InsightFormBuilder';
 import { AIInsightTitlesManager } from '@/components/admin/AIInsightTitlesManager';
@@ -91,7 +88,7 @@ export const AdminDashboard = () => {
       <AdminStats stats={stats} loading={loading} />
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Users
@@ -107,18 +104,6 @@ export const AdminDashboard = () => {
           <TabsTrigger value="ai-titles" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
             AI Titles
-          </TabsTrigger>
-          <TabsTrigger value="handovers" className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Handover Sync
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Integrations
-          </TabsTrigger>
-          <TabsTrigger value="activity" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Activity
           </TabsTrigger>
         </TabsList>
 
@@ -136,18 +121,6 @@ export const AdminDashboard = () => {
 
         <TabsContent value="ai-titles" className="space-y-6">
           <AIInsightTitlesManager />
-        </TabsContent>
-
-        <TabsContent value="handovers" className="space-y-6">
-          <HandoverAuthSyncManager />
-        </TabsContent>
-
-        <TabsContent value="integrations" className="space-y-6">
-          <IntegrationsManager />
-        </TabsContent>
-
-        <TabsContent value="activity" className="space-y-6">
-          <ActivityLog />
         </TabsContent>
       </Tabs>
     </div>

@@ -137,8 +137,8 @@ export const HRManagerDashboard: React.FC = () => {
   const { toast } = useToast();
 
   // Data hooks
-  const { stats, loading: statsLoading, error: statsError } = useHandoverStats(user?.department);
-  const { handovers, loading: handoversLoading, error: handoversError } = useHandoversList(user?.department);
+  const { stats, loading: statsLoading, error: statsError } = useHandoverStats();
+  const { handovers, loading: handoversLoading, error: handoversError } = useHandoversList();
   const { insights, loading: insightsLoading, error: insightsError } = useAIInsightsForHR();
   const { requests: managerRequests, loading: requestsLoading, respondToRequest } = useHelpRequests('manager');
   const { users, refetch: refetchUsers } = useUsersManagement();

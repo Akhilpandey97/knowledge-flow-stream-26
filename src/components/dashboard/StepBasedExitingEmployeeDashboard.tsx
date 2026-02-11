@@ -3,34 +3,34 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { CheckCircle, Target, Plus, Video, Loader2, Edit2, Calendar, Lightbulb, MessageCircle } from 'lucide-react';
-import { DocumentUploadScreen } from './DocumentUploadScreen';
+import { Textarea } from '@/components/ui/textarea';
+import { CheckCircle, Target, Plus, Video, Loader2, Edit2, Calendar, Lightbulb, MessageCircle, Save, X } from 'lucide-react';
 import { InsightCollectionModal } from './InsightCollectionModal';
 import { ZoomMeetingModal } from './ZoomMeetingModal';
 import { HelpRequestsPanel } from './HelpRequestsPanel';
+import { ExpandableText } from '@/components/ui/expandable-text';
 
-import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 import { useHandover } from '@/hooks/useHandover';
 import { useHelpRequests } from '@/hooks/useHelpRequests';
 import { HandoverTask, TaskInsight } from '@/types/handover';
 
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
-  const { hasUploadedDocument, loading: uploadLoading, markDocumentUploaded } = useDocumentUpload();
   const { tasks, loading: handoverLoading, error, updateTask, createHandoverWithTemplate } = useHandover();
   const { requests: employeeRequests, loading: requestsLoading, respondToRequest } = useHelpRequests('employee');
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
   const [editingInsight, setEditingInsight] = useState<TaskInsight | null>(null);
+  const [editingNoteTaskId, setEditingNoteTaskId] = useState<string | null>(null);
+  const [editNoteContent, setEditNoteContent] = useState('');
 
   // Create handover with template on first load if no tasks exist
   useEffect(() => {
-    if (!handoverLoading && tasks.length === 0 && hasUploadedDocument) {
-      console.log('Creating handover with template - tasks:', tasks.length, 'uploaded:', hasUploadedDocument);
+    if (!handoverLoading && tasks.length === 0) {
+      console.log('Creating handover with template - tasks:', tasks.length);
       createHandoverWithTemplate();
     }
-  }, [handoverLoading, tasks.length, hasUploadedDocument]);
+  }, [handoverLoading, tasks.length]);
 
   const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const totalTasks = tasks.length;
@@ -130,7 +130,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   };
 
   // Show loading state
-  if (uploadLoading || handoverLoading) {
+  if (handoverLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -151,11 +151,6 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
     );
   }
   
-  // Show document upload screen only for first-time users (who haven't uploaded before)
-  if (!hasUploadedDocument) {
-    return <DocumentUploadScreen onUploadComplete={markDocumentUploaded} />;
-  }
-
   return (
     <div className="min-h-screen bg-background">
       {/* Main Content */}
@@ -211,16 +206,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Help Requests from Successor */}
-        <HelpRequestsPanel
-          requests={employeeRequests.filter(r => r.request_type === 'employee')}
-          loading={requestsLoading}
-          onRespond={respondToRequest}
-          title="Questions from Successor"
-          description="Your successor has questions about these tasks"
-          emptyMessage="No questions from your successor yet. They'll appear here when asked."
-          viewerRole="employee"
-        />
+        {/* Help requests are now shown inline within each task card */}
 
         {/* Knowledge Transfer Checklist */}
         <Card>
@@ -291,7 +277,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                                         {new Date(insight.createdAt).toLocaleDateString()}
                                       </span>
                                     </div>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">{insight.content}</div>
+                                    <ExpandableText text={insight.content} maxLines={3} className="text-sm text-muted-foreground" />
                                     {insight.attachments && insight.attachments.length > 0 && (
                                       <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                                         <span>📎 {insight.attachments.join(', ')}</span>
@@ -315,13 +301,70 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                         {/* Fallback for old notes format */}
                         {task.notes && (!task.insights || task.insights.length === 0) && (
                           <div className="bg-muted/50 border rounded p-3 mb-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <CheckCircle className="h-4 w-4 text-primary" />
-                              <span className="text-sm font-medium">Notes Added</span>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-medium">Notes</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => {
+                                  setEditingNoteTaskId(task.id);
+                                  setEditNoteContent(task.notes || '');
+                                }}
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
-                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{task.notes}</div>
+                            {editingNoteTaskId === task.id ? (
+                              <div className="space-y-2">
+                                <Textarea
+                                  value={editNoteContent}
+                                  onChange={(e) => setEditNoteContent(e.target.value)}
+                                  className="min-h-[80px] text-sm"
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" className="h-7 text-xs" onClick={async () => {
+                                    await updateTask(task.id, { notes: editNoteContent });
+                                    setEditingNoteTaskId(null);
+                                  }}>
+                                    <Save className="h-3 w-3 mr-1" />Save
+                                  </Button>
+                                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEditingNoteTaskId(null)}>
+                                    <X className="h-3 w-3 mr-1" />Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <ExpandableText text={task.notes} maxLines={3} className="text-sm text-muted-foreground" />
+                            )}
                           </div>
                         )}
+
+                        {/* Task-specific Help Requests */}
+                        {(() => {
+                          const taskRequests = employeeRequests.filter(r => r.task_id === task.id);
+                          if (taskRequests.length === 0) return null;
+                          return (
+                            <div className="bg-primary/5 border border-primary/20 rounded p-3 mb-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <MessageCircle className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-medium">Help Requests ({taskRequests.length})</span>
+                              </div>
+                              {taskRequests.map(req => (
+                                <div key={req.id} className="text-xs border-b last:border-b-0 py-2 space-y-1">
+                                  <p className="text-foreground">{req.message}</p>
+                                  {req.response && (
+                                    <p className="text-success italic">↳ {req.response}</p>
+                                  )}
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                         
                         <div className="flex flex-wrap gap-2">
                           <Button 
