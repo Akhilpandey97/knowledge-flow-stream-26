@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, Target, Plus, Video, Loader2, Edit2, Calendar, Lightbulb, MessageCircle, Save, X } from 'lucide-react';
+import { CheckCircle, Target, Plus, Video, Loader2, Edit2, Calendar, Lightbulb, MessageCircle, Save, X, Send, Sparkles } from 'lucide-react';
 import { InsightCollectionModal } from './InsightCollectionModal';
 import { ZoomMeetingModal } from './ZoomMeetingModal';
 import { HelpRequestsPanel } from './HelpRequestsPanel';
@@ -12,6 +13,7 @@ import { ExpandableText } from '@/components/ui/expandable-text';
 
 import { useHandover } from '@/hooks/useHandover';
 import { useHelpRequests } from '@/hooks/useHelpRequests';
+import { useMeetings } from '@/hooks/useMeetings';
 import { HandoverTask, TaskInsight } from '@/types/handover';
 
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
@@ -23,6 +25,9 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [editingInsight, setEditingInsight] = useState<TaskInsight | null>(null);
   const [editingNoteTaskId, setEditingNoteTaskId] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState('');
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  const { getMeetingsForTask } = useMeetings();
 
   // Create handover with template on first load if no tasks exist
   useEffect(() => {
@@ -344,7 +349,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                         )}
 
                         {/* Task-specific Help Requests */}
-                        {(() => {
+                         {(() => {
                           const taskRequests = employeeRequests.filter(r => r.task_id === task.id);
                           if (taskRequests.length === 0) return null;
                           return (
@@ -360,6 +365,59 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                                     <p className="text-success italic">↳ {req.response}</p>
                                   )}
                                   <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                                  {req.status === 'pending' && (
+                                    <div className="flex gap-1 mt-1">
+                                      <Input
+                                        placeholder="Type your reply..."
+                                        className="h-7 text-xs flex-1"
+                                        value={replyInputs[req.id] || ''}
+                                        onChange={(e) => setReplyInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
+                                      />
+                                      <Button
+                                        size="sm"
+                                        className="h-7 px-2 text-xs"
+                                        disabled={!replyInputs[req.id]?.trim() || replyingId === req.id}
+                                        onClick={async () => {
+                                          setReplyingId(req.id);
+                                          await respondToRequest(req.id, replyInputs[req.id]);
+                                          setReplyInputs(prev => { const n = { ...prev }; delete n[req.id]; return n; });
+                                          setReplyingId(null);
+                                        }}
+                                      >
+                                        {replyingId === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Task Meeting Summaries */}
+                        {(() => {
+                          const taskMeetings = getMeetingsForTask(task.id).filter(m => m.ai_summary);
+                          if (taskMeetings.length === 0) return null;
+                          return (
+                            <div className="space-y-2 mb-3">
+                              {taskMeetings.map(meeting => (
+                                <div key={meeting.id} className="bg-primary/5 border border-primary/20 rounded p-3 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                    <span className="text-xs font-medium">Meeting Summary: {meeting.title}</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">{meeting.ai_summary}</p>
+                                  {meeting.ai_action_items?.length > 0 && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs font-medium">Action Items:</span>
+                                      {meeting.ai_action_items.map((item: any, idx: number) => (
+                                        <div key={idx} className="text-xs flex items-center gap-1.5">
+                                          <Badge variant="outline" className="text-[10px] px-1 py-0">{item.priority}</Badge>
+                                          <span className="text-muted-foreground">{item.title}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>

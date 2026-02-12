@@ -470,6 +470,78 @@ export type Database = {
         }
         Relationships: []
       }
+      meetings: {
+        Row: {
+          ai_action_items: Json | null
+          ai_summary: string | null
+          attendees: string[] | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration: string
+          handover_id: string | null
+          id: string
+          meeting_date: string
+          meeting_link: string | null
+          meeting_time: string
+          status: string
+          task_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ai_action_items?: Json | null
+          ai_summary?: string | null
+          attendees?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration?: string
+          handover_id?: string | null
+          id?: string
+          meeting_date: string
+          meeting_link?: string | null
+          meeting_time: string
+          status?: string
+          task_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          ai_action_items?: Json | null
+          ai_summary?: string | null
+          attendees?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration?: string
+          handover_id?: string | null
+          id?: string
+          meeting_date?: string
+          meeting_link?: string | null
+          meeting_time?: string
+          status?: string
+          task_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_handover_id_fkey"
+            columns: ["handover_id"]
+            isOneToOne: false
+            referencedRelation: "handovers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string | null
