@@ -26,6 +26,7 @@ import { TaskAISummaryModal } from './TaskAISummaryModal';
 import { HelpRequestsPanel } from './HelpRequestsPanel';
 import { useHandover } from '@/hooks/useHandover';
 import { useHelpRequests } from '@/hooks/useHelpRequests';
+import { useMeetings } from '@/hooks/useMeetings';
 import { useAuth } from '@/contexts/AuthContext';
 import { HandoverTask } from '@/types/handover';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +35,7 @@ export const SuccessorDashboard: React.FC = () => {
   const { tasks, loading, error, acknowledgeTask } = useHandover();
   const { user } = useAuth();
   const { requests: helpRequests, loading: helpLoading, createRequest, resolveRequest } = useHelpRequests('successor');
+  const { getMeetingsForTask } = useMeetings();
   const [notesModal, setNotesModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
   const [acknowledgingTaskId, setAcknowledgingTaskId] = useState<string | null>(null);
@@ -293,6 +295,35 @@ export const SuccessorDashboard: React.FC = () => {
                       </div>
                     );
                   })()}
+                  {/* Task Meeting Summaries */}
+                  {(() => {
+                    const taskMeetings = getMeetingsForTask(task.id).filter(m => m.ai_summary);
+                    if (taskMeetings.length === 0) return null;
+                    return (
+                      <div className="space-y-2 mb-3">
+                        {taskMeetings.map(meeting => (
+                          <div key={meeting.id} className="bg-primary/5 border border-primary/20 rounded p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-3.5 w-3.5 text-primary" />
+                              <span className="text-xs font-medium">Meeting: {meeting.title}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{meeting.ai_summary}</p>
+                            {meeting.ai_action_items?.length > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-xs font-medium">Action Items:</span>
+                                {meeting.ai_action_items.map((item: any, idx: number) => (
+                                  <div key={idx} className="text-xs flex items-center gap-1.5">
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0">{item.priority}</Badge>
+                                    <span className="text-muted-foreground">{item.title}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   <div className="flex flex-wrap gap-2">
                     <Button
                       variant="soft"
@@ -410,6 +441,35 @@ export const SuccessorDashboard: React.FC = () => {
                             <p className="text-foreground">{req.message}</p>
                             {req.response && <p className="text-success italic">↳ {req.response}</p>}
                             <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {/* Task Meeting Summaries */}
+                  {(() => {
+                    const taskMeetings = getMeetingsForTask(task.id).filter(m => m.ai_summary);
+                    if (taskMeetings.length === 0) return null;
+                    return (
+                      <div className="space-y-2 mb-3 mt-2">
+                        {taskMeetings.map(meeting => (
+                          <div key={meeting.id} className="bg-primary/5 border border-primary/20 rounded p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-3.5 w-3.5 text-primary" />
+                              <span className="text-xs font-medium">Meeting: {meeting.title}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{meeting.ai_summary}</p>
+                            {meeting.ai_action_items?.length > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-xs font-medium">Action Items:</span>
+                                {meeting.ai_action_items.map((item: any, idx: number) => (
+                                  <div key={idx} className="text-xs flex items-center gap-1.5">
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0">{item.priority}</Badge>
+                                    <span className="text-muted-foreground">{item.title}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
