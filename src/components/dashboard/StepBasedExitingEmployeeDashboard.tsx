@@ -17,7 +17,7 @@ import { useMeetings } from '@/hooks/useMeetings';
 import { HandoverTask, TaskInsight } from '@/types/handover';
 
 export const StepBasedExitingEmployeeDashboard: React.FC = () => {
-  const { tasks, loading: handoverLoading, error, updateTask, createHandoverWithTemplate } = useHandover();
+  const { tasks, loading: handoverLoading, error, updateTask, createHandoverWithTemplate, handoverId } = useHandover();
   const { requests: employeeRequests, loading: requestsLoading, respondToRequest } = useHelpRequests('employee');
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
@@ -27,6 +27,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [editNoteContent, setEditNoteContent] = useState('');
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [expandedHelpTasks, setExpandedHelpTasks] = useState<Record<string, boolean>>({});
   const { getMeetingsForTask } = useMeetings();
 
   // Create handover with template on first load if no tasks exist
@@ -352,44 +353,65 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                          {(() => {
                           const taskRequests = employeeRequests.filter(r => r.task_id === task.id);
                           if (taskRequests.length === 0) return null;
+                          const isExpanded = expandedHelpTasks[task.id] || false;
                           return (
                             <div className="bg-primary/5 border border-primary/20 rounded p-3 mb-3">
-                              <div className="flex items-center gap-2 mb-2">
+                              <button
+                                className="flex items-center gap-2 w-full text-left"
+                                onClick={() => setExpandedHelpTasks(prev => ({ ...prev, [task.id]: !prev[task.id] }))}
+                              >
                                 <MessageCircle className="h-4 w-4 text-primary" />
                                 <span className="text-sm font-medium">Help Requests ({taskRequests.length})</span>
-                              </div>
-                              {taskRequests.map(req => (
-                                <div key={req.id} className="text-xs border-b last:border-b-0 py-2 space-y-1">
-                                  <p className="text-foreground">{req.message}</p>
-                                  {req.response && (
-                                    <p className="text-success italic">↳ {req.response}</p>
-                                  )}
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
-                                  {req.status === 'pending' && (
-                                    <div className="flex gap-1 mt-1">
-                                      <Input
-                                        placeholder="Type your reply..."
-                                        className="h-7 text-xs flex-1"
-                                        value={replyInputs[req.id] || ''}
-                                        onChange={(e) => setReplyInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
-                                      />
-                                      <Button
-                                        size="sm"
-                                        className="h-7 px-2 text-xs"
-                                        disabled={!replyInputs[req.id]?.trim() || replyingId === req.id}
-                                        onClick={async () => {
-                                          setReplyingId(req.id);
-                                          await respondToRequest(req.id, replyInputs[req.id]);
-                                          setReplyInputs(prev => { const n = { ...prev }; delete n[req.id]; return n; });
-                                          setReplyingId(null);
-                                        }}
-                                      >
-                                        {replyingId === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                                      </Button>
+                                <span className="text-xs text-muted-foreground ml-auto">{isExpanded ? '▲' : '▼'}</span>
+                              </button>
+                              {isExpanded && (
+                                <div className="mt-2">
+                                  {taskRequests.map(req => (
+                                    <div key={req.id} className="text-xs border-b last:border-b-0 py-2 space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-foreground">{req.message}</p>
+                                        <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                                          {new Date(req.created_at).toLocaleDateString()} {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                      </div>
+                                      {req.response && (
+                                        <div className="flex items-center justify-between">
+                                          <p className="text-success italic">↳ {req.response}</p>
+                                          {req.responded_at && (
+                                            <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                                              {new Date(req.responded_at).toLocaleDateString()} {new Date(req.responded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                                      {req.status === 'pending' && (
+                                        <div className="flex gap-1 mt-1">
+                                          <Input
+                                            placeholder="Type your reply..."
+                                            className="h-7 text-xs flex-1"
+                                            value={replyInputs[req.id] || ''}
+                                            onChange={(e) => setReplyInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
+                                          />
+                                          <Button
+                                            size="sm"
+                                            className="h-7 px-2 text-xs"
+                                            disabled={!replyInputs[req.id]?.trim() || replyingId === req.id}
+                                            onClick={async () => {
+                                              setReplyingId(req.id);
+                                              await respondToRequest(req.id, replyInputs[req.id]);
+                                              setReplyInputs(prev => { const n = { ...prev }; delete n[req.id]; return n; });
+                                              setReplyingId(null);
+                                            }}
+                                          >
+                                            {replyingId === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                          </Button>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
+                                  ))}
                                 </div>
-                              ))}
+                              )}
                             </div>
                           );
                         })()}
@@ -472,6 +494,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         onClose={() => setIsZoomModalOpen(false)}
         task={selectedTask}
         allTasks={tasks}
+        handoverId={handoverId || undefined}
       />
 
     </div>

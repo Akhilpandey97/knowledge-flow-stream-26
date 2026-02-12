@@ -35,6 +35,17 @@ export const ZoomMeetingModal: React.FC<ZoomMeetingModalProps> = ({
     attendees: ''
   });
 
+  // Auto-fill task when modal opens with a specific task
+  React.useEffect(() => {
+    if (task) {
+      setNewMeeting(prev => ({
+        ...prev,
+        taskId: task.id,
+        title: `Knowledge Transfer - ${task.title}`
+      }));
+    }
+  }, [task]);
+
   const filteredMeetings = meetings.filter(m => !task || m.task_id === task.id);
 
   const handleCreateMeeting = async () => {
