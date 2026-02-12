@@ -37,6 +37,7 @@ export const SuccessorDashboard: React.FC = () => {
   const { requests: helpRequests, loading: helpLoading, createRequest, resolveRequest } = useHelpRequests('successor');
   const { getMeetingsForTask } = useMeetings();
   const [notesModal, setNotesModal] = useState(false);
+  const [expandedHelpTasks, setExpandedHelpTasks] = useState<Record<string, boolean>>({});
   const [selectedTask, setSelectedTask] = useState<HandoverTask | null>(null);
   const [acknowledgingTaskId, setAcknowledgingTaskId] = useState<string | null>(null);
   const [helpRequestModal, setHelpRequestModal] = useState<{
@@ -279,19 +280,42 @@ export const SuccessorDashboard: React.FC = () => {
                   {(() => {
                     const taskReqs = helpRequests.filter(r => r.task_id === task.id);
                     if (taskReqs.length === 0) return null;
+                    const isExpanded = expandedHelpTasks[`c-${task.id}`] || false;
                     return (
                       <div className="bg-primary/5 border border-primary/20 rounded p-3 mb-3">
-                        <div className="flex items-center gap-2 mb-2">
+                        <button
+                          className="flex items-center gap-2 w-full text-left"
+                          onClick={() => setExpandedHelpTasks(prev => ({ ...prev, [`c-${task.id}`]: !prev[`c-${task.id}`] }))}
+                        >
                           <MessageCircle className="h-3.5 w-3.5 text-primary" />
                           <span className="text-xs font-medium">Help Requests ({taskReqs.length})</span>
-                        </div>
-                        {taskReqs.map(req => (
-                          <div key={req.id} className="text-xs border-b last:border-b-0 py-1.5 space-y-1">
-                            <p className="text-foreground">{req.message}</p>
-                            {req.response && <p className="text-success italic">↳ {req.response}</p>}
-                            <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                          <span className="text-xs text-muted-foreground ml-auto">{isExpanded ? '▲' : '▼'}</span>
+                        </button>
+                        {isExpanded && (
+                          <div className="mt-2">
+                            {taskReqs.map(req => (
+                              <div key={req.id} className="text-xs border-b last:border-b-0 py-1.5 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-foreground">{req.message}</p>
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                                    {new Date(req.created_at).toLocaleDateString()} {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                {req.response && (
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-success italic">↳ {req.response}</p>
+                                    {req.responded_at && (
+                                      <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                                        {new Date(req.responded_at).toLocaleDateString()} {new Date(req.responded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     );
                   })()}
@@ -430,19 +454,42 @@ export const SuccessorDashboard: React.FC = () => {
                   {(() => {
                     const taskReqs = helpRequests.filter(r => r.task_id === task.id);
                     if (taskReqs.length === 0) return null;
+                    const isExpanded = expandedHelpTasks[`p-${task.id}`] || false;
                     return (
                       <div className="bg-primary/5 border border-primary/20 rounded p-3 mb-3 mt-2">
-                        <div className="flex items-center gap-2 mb-2">
+                        <button
+                          className="flex items-center gap-2 w-full text-left"
+                          onClick={() => setExpandedHelpTasks(prev => ({ ...prev, [`p-${task.id}`]: !prev[`p-${task.id}`] }))}
+                        >
                           <MessageCircle className="h-3.5 w-3.5 text-primary" />
                           <span className="text-xs font-medium">Help Requests ({taskReqs.length})</span>
-                        </div>
-                        {taskReqs.map(req => (
-                          <div key={req.id} className="text-xs border-b last:border-b-0 py-1.5 space-y-1">
-                            <p className="text-foreground">{req.message}</p>
-                            {req.response && <p className="text-success italic">↳ {req.response}</p>}
-                            <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                          <span className="text-xs text-muted-foreground ml-auto">{isExpanded ? '▲' : '▼'}</span>
+                        </button>
+                        {isExpanded && (
+                          <div className="mt-2">
+                            {taskReqs.map(req => (
+                              <div key={req.id} className="text-xs border-b last:border-b-0 py-1.5 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-foreground">{req.message}</p>
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                                    {new Date(req.created_at).toLocaleDateString()} {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                {req.response && (
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-success italic">↳ {req.response}</p>
+                                    {req.responded_at && (
+                                      <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                                        {new Date(req.responded_at).toLocaleDateString()} {new Date(req.responded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                <Badge variant="outline" className="text-[10px] px-1 py-0">{req.status}</Badge>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     );
                   })()}
