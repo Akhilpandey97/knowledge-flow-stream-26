@@ -1,137 +1,87 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, User, Settings, Users, UserCheck, Building2 } from 'lucide-react';
-import { UserRole } from '@/types/auth';
+import { LogOut, Shield, ArrowLeftRight, UserCheck, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-export const DashboardLayout: React.FC<{
-  children: React.ReactNode;
-}> = ({
-  children
-}) => {
-  const {
-    user,
-    logout,
-    loggingOut
-  } = useAuth();
+
+export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, logout, loggingOut } = useAuth();
   if (!user) return null;
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
+
   const getRoleDisplayName = (role: string) => {
     switch (role) {
-      case 'exiting':
-        return 'Exiting Employee';
-      case 'successor':
-        return 'Successor';
-      case 'hr-manager':
-        return 'HR Manager';
-      default:
-        return role;
+      case 'exiting': return 'Exiting Employee';
+      case 'successor': return 'Successor';
+      case 'hr-manager': return 'HR Manager';
+      case 'admin': return 'Administrator';
+      default: return role;
     }
   };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'exiting':
-        return User;
-      case 'successor':
-        return UserCheck;
-      case 'hr-manager':
-        return Building2;
-      default:
-        return User;
+      case 'hr-manager': return <Building2 className="h-3.5 w-3.5" />;
+      case 'successor': return <UserCheck className="h-3.5 w-3.5" />;
+      case 'admin': return <Shield className="h-3.5 w-3.5" />;
+      default: return <ArrowLeftRight className="h-3.5 w-3.5" />;
     }
   };
-  const switchRole = (newRole: UserRole) => {
-    // Mock role switching - in real app this would be API call
-    const mockUsers = {
-      'exiting': {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@company.com',
-        role: 'exiting' as UserRole,
-        department: 'Sales',
-        avatar: ''
-      },
-      'successor': {
-        id: '2',
-        name: 'Sarah Wilson',
-        email: 'sarah.wilson@company.com',
-        role: 'successor' as UserRole,
-        department: 'Sales',
-        avatar: ''
-      },
-      'hr-manager': {
-        id: '3',
-        name: 'Emily Chen',
-        email: 'hr@company.com',
-        role: 'hr-manager' as UserRole,
-        department: 'Human Resources',
-        avatar: ''
-      }
-    };
-    const newUser = mockUsers[newRole];
-    localStorage.setItem('auth-user', JSON.stringify(newUser));
-    window.location.reload(); // Simple reload to switch roles
-  };
-  return <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card shadow-soft sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-                Seamless Handover
-              </h1>
-              <div className="hidden md:block text-sm text-muted-foreground">
-                {user.department} Department
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right hidden sm:block">
-                <div className="font-medium text-sm">{user.name}</div>
-                <div className="text-xs text-muted-foreground">{getRoleDisplayName(user.role)}</div>
-              </div>
-              
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
-              
-              <Button variant="ghost" size="sm" onClick={logout} disabled={loggingOut} className="text-muted-foreground hover:text-foreground disabled:opacity-50">
-                <LogOut className={`h-4 w-4 ${loggingOut ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline ml-2">
-                  {loggingOut ? 'Logging out...' : 'Logout'}
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Enterprise Header */}
+      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-sm enterprise-shadow">
+        <div className="container mx-auto px-6">
+          <div className="flex h-16 items-center justify-between">
+            {/* Brand */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+                  <ArrowLeftRight className="h-4 w-4 text-primary-foreground" />
+                </div>
+                <span className="text-lg font-semibold tracking-tight text-foreground">
+                  Seamless
                 </span>
+              </div>
+              <div className="hidden md:block h-6 w-px bg-border" />
+              <span className="hidden md:block text-sm text-muted-foreground">
+                {user.department || 'Knowledge Transfer'}
+              </span>
+            </div>
+
+            {/* Right side */}
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="hidden sm:flex items-center gap-1.5 font-normal text-xs px-2.5 py-1 border-border text-muted-foreground">
+                {getRoleIcon(user.role)}
+                {getRoleDisplayName(user.role)}
+              </Badge>
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
+                {(user.name || user.email || '?')[0].toUpperCase()}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={logout}
+                disabled={loggingOut}
+                className="text-muted-foreground hover:text-foreground h-8 px-2.5"
+              >
+                <LogOut className={`h-4 w-4 ${loggingOut ? 'animate-spin' : ''}`} />
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Role Navigation */}
-      <div className="border-b bg-card">
-        <div className="container mx-auto px-4">
-          
-        </div>
-      </div>
-
       {/* Main Content */}
-      <motion.main className="container mx-auto px-4 py-6" initial={{
-      opacity: 0,
-      y: 20
-    }} animate={{
-      opacity: 1,
-      y: 0
-    }} transition={{
-      duration: 0.4,
-      ease: "easeOut"
-    }}>
+      <motion.main
+        className="container mx-auto px-6 py-8 max-w-7xl"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
         {children}
       </motion.main>
-    </div>;
+    </div>
+  );
 };
