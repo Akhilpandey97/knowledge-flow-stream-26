@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeftRight, Lock } from 'lucide-react';
 import { PasswordResetDialog } from './PasswordResetDialog';
 
 export const LoginForm: React.FC = () => {
@@ -20,7 +20,6 @@ export const LoginForm: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     try {
       await login(email, password);
     } catch (err: unknown) {
@@ -32,79 +31,82 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
-        <Card className="shadow-large">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-              Seamless Handover
-            </CardTitle>
-            <CardDescription>
-              Secure knowledge transfer platform
-            </CardDescription>
+      <div className="w-full max-w-sm space-y-8">
+        {/* Brand */}
+        <div className="text-center space-y-2">
+          <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center mx-auto enterprise-shadow-md">
+            <ArrowLeftRight className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Seamless Handover</h1>
+          <p className="text-sm text-muted-foreground">Enterprise knowledge transfer platform</p>
+        </div>
+
+        <Card className="enterprise-shadow-md border-border/60">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-medium">Sign in</CardTitle>
+            <CardDescription className="text-xs">Enter your credentials to continue</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="you@company.com"
                   required
+                  className="h-9"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs font-medium">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="••••••••"
                   required
+                  className="h-9"
                 />
               </div>
-              
+
               {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                <Alert variant="destructive" className="py-2">
+                  <AlertDescription className="text-xs">{error}</AlertDescription>
                 </Alert>
               )}
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full h-9" disabled={isLoading}>
                 {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
+                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Signing in...</>
                 ) : (
-                  'Sign in'
+                  <><Lock className="mr-2 h-3.5 w-3.5" />Sign in</>
                 )}
               </Button>
 
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full"
+              <button
+                type="button"
+                className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors text-center"
                 onClick={() => setIsResetDialogOpen(true)}
                 disabled={isLoading}
               >
-                Reset Password
-              </Button>
+                Forgot password?
+              </button>
             </form>
 
-            <PasswordResetDialog 
+            <PasswordResetDialog
               isOpen={isResetDialogOpen}
               onClose={() => setIsResetDialogOpen(false)}
             />
           </CardContent>
         </Card>
+
+        <p className="text-[11px] text-center text-muted-foreground/60">
+          Protected by enterprise-grade encryption
+        </p>
       </div>
     </div>
   );

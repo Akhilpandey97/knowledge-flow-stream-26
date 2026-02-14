@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { 
   BarChart3, Users, AlertTriangle, TrendingUp, Brain, Sparkles, Target, 
   UserCheck, UserX, TrendingDown, CheckCircle2, Loader2, HelpCircle,
-  Search, ChevronDown, ChevronUp, Zap, ArrowRight, Clock, Mail, Plus, UserPlus
+  Search, ChevronDown, ChevronUp, Zap, ArrowRight, Clock, Mail, Plus, UserPlus,
+  CheckCheck, ShieldCheck
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
 import { HelpRequestsPanel } from './HelpRequestsPanel';
@@ -29,18 +30,26 @@ const departments = ['Sales', 'Engineering', 'Finance', 'Marketing', 'HR', 'Oper
 
 // --- Sub-components ---
 
-const StatPill: React.FC<{ icon: React.ReactNode; value: string | number; label: string; variant?: string }> = ({ icon, value, label, variant }) => (
-  <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-lg border bg-card ${
-    variant === 'critical' ? 'border-critical/30 bg-critical/5' : 
-    variant === 'success' ? 'border-success/30 bg-success/5' : 
-    'border-border'
+const MetricCard: React.FC<{ icon: React.ReactNode; value: string | number; label: string; variant?: string }> = ({ icon, value, label, variant }) => (
+  <Card className={`enterprise-shadow ${
+    variant === 'critical' ? 'border-critical/20' : 
+    variant === 'success' ? 'border-success/20' : 
+    'border-border/60'
   }`}>
-    {icon}
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-lg font-bold text-foreground">{value}</span>
-      <span className="text-xs text-muted-foreground">{label}</span>
-    </div>
-  </div>
+    <CardContent className="p-4 flex items-center gap-3">
+      <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+        variant === 'critical' ? 'bg-critical/10 text-critical' :
+        variant === 'success' ? 'bg-success/10 text-success' :
+        'bg-primary/10 text-primary'
+      }`}>
+        {icon}
+      </div>
+      <div>
+        <div className="text-xl font-semibold text-foreground leading-none">{value}</div>
+        <div className="text-[11px] text-muted-foreground mt-0.5">{label}</div>
+      </div>
+    </CardContent>
+  </Card>
 );
 
 const InsightChip: React.FC<{ type: string; title: string; description: string; priority: string }> = ({ type, title, description, priority }) => {
@@ -51,16 +60,16 @@ const InsightChip: React.FC<{ type: string; title: string; description: string; 
     alert: <AlertTriangle className="h-3.5 w-3.5" />,
   };
   const colorMap: Record<string, string> = {
-    critical: 'border-critical/30 bg-critical/5 text-critical',
-    high: 'border-warning/30 bg-warning/5 text-warning',
-    positive: 'border-success/30 bg-success/5 text-success',
-    medium: 'border-primary/30 bg-primary/5 text-primary',
-    low: 'border-muted-foreground/20 bg-muted text-muted-foreground',
+    critical: 'border-critical/20 bg-critical-soft text-critical',
+    high: 'border-warning/20 bg-warning-soft text-warning',
+    positive: 'border-success/20 bg-success-soft text-success',
+    medium: 'border-primary/20 bg-primary-soft text-primary',
+    low: 'border-border bg-muted text-muted-foreground',
   };
   return (
-    <div className={`flex-shrink-0 w-64 rounded-lg border p-3 space-y-1 ${colorMap[priority] || colorMap.medium}`}>
-      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide opacity-80">
-        {iconMap[type] || <Sparkles className="h-3.5 w-3.5" />}
+    <div className={`flex-shrink-0 w-60 rounded-lg border p-3 space-y-1.5 ${colorMap[priority] || colorMap.medium}`}>
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider opacity-70">
+        {iconMap[type] || <Sparkles className="h-3 w-3" />}
         {type}
       </div>
       <p className="text-sm font-medium text-foreground leading-snug">{title}</p>
@@ -70,36 +79,35 @@ const InsightChip: React.FC<{ type: string; title: string; description: string; 
 };
 
 const HandoverRow: React.FC<{ handover: any; expanded: boolean; onToggle: () => void }> = ({ handover, expanded, onToggle }) => {
-  const riskColors: Record<string, string> = {
-    critical: 'bg-critical/10 text-critical border-critical/20',
-    high: 'bg-warning/10 text-warning border-warning/20',
-    medium: 'bg-primary/10 text-primary border-primary/20',
-    low: 'bg-success/10 text-success border-success/20',
-  };
   const progressVariant = handover.progress >= 80 ? 'success' : handover.progress >= 50 ? 'warning' : 'critical';
   
   return (
-    <div className="border rounded-lg overflow-hidden bg-card">
-      <div className="flex items-center gap-4 p-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={onToggle}>
+    <Card className={`enterprise-shadow overflow-hidden transition-all ${expanded ? 'ring-1 ring-primary/20' : ''}`}>
+      <div className="flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/30 transition-colors" onClick={onToggle}>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-sm truncate">{handover.exitingEmployee}</span>
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="font-medium text-sm text-foreground truncate">{handover.exitingEmployee}</span>
             <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm text-muted-foreground truncate">{handover.successor}</span>
+            <span className="text-sm text-muted-foreground truncate">{handover.successor || 'Unassigned'}</span>
           </div>
           <span className="text-xs text-muted-foreground">{handover.department}</span>
         </div>
-        <div className="w-32 hidden sm:block">
+        <div className="w-28 hidden sm:block space-y-1">
           <Progress value={handover.progress} variant={progressVariant} className="h-1.5" />
-          <span className="text-xs text-muted-foreground">{handover.progress}%</span>
+          <span className="text-[11px] text-muted-foreground">{handover.progress}%</span>
         </div>
-        <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 ${riskColors[handover.aiRiskLevel]}`}>
+        <Badge variant="outline" className={`text-[10px] px-2 py-0.5 font-medium ${
+          handover.aiRiskLevel === 'critical' ? 'border-critical/30 text-critical bg-critical/5' :
+          handover.aiRiskLevel === 'high' ? 'border-warning/30 text-warning bg-warning/5' :
+          handover.aiRiskLevel === 'low' ? 'border-success/30 text-success bg-success/5' :
+          'border-primary/30 text-primary bg-primary/5'
+        }`}>
           {handover.aiRiskLevel}
         </Badge>
         {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </div>
       {expanded && (
-        <div className="border-t px-4 py-3 bg-muted/30 space-y-2 text-sm">
+        <div className="border-t px-4 py-3 bg-muted/20 space-y-2 text-sm">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Mail className="h-3.5 w-3.5" />
@@ -114,16 +122,12 @@ const HandoverRow: React.FC<{ handover: any; expanded: boolean; onToggle: () => 
               <span className="text-xs">Created {new Date(handover.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:hidden">
-            <Progress value={handover.progress} variant={progressVariant} className="h-1.5 flex-1" />
-            <span className="text-xs font-medium">{handover.progress}%</span>
-          </div>
           <p className="text-xs text-muted-foreground">
             {handover.completedTasks}/{handover.taskCount} tasks · <span className="italic">{handover.aiRecommendation}</span>
           </p>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 
@@ -147,6 +151,13 @@ export const HRManagerDashboard: React.FC = () => {
   const isLoading = statsLoading || handoversLoading || insightsLoading;
   const managerEscalations = managerRequests.filter(r => r.request_type === 'manager');
   const pendingEscalations = managerEscalations.filter(r => r.status === 'pending').length;
+  
+  // KT Approval requests specifically
+  const ktApprovalRequests = managerEscalations.filter(r => 
+    r.message?.toLowerCase().includes('requesting approval to close') || 
+    r.message?.toLowerCase().includes('tasks have been acknowledged')
+  );
+  const pendingKTApprovals = ktApprovalRequests.filter(r => r.status === 'pending');
 
   // Handover creation state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -225,12 +236,16 @@ export const HRManagerDashboard: React.FC = () => {
     }
   };
 
+  const handleApproveKT = async (requestId: string) => {
+    await respondToRequest(requestId, 'KT has been approved. The handover is now officially closed. Great work!');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Loading dashboard data...</p>
+        <div className="text-center space-y-3">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -240,20 +255,15 @@ export const HRManagerDashboard: React.FC = () => {
   const attentionCount = needsAttention.noSuccessor.length + needsAttention.lowProgress.length + pendingEscalations;
 
   return (
-    <div className="space-y-5">
-      {/* Compact Header */}
-      <div className="flex flex-col gap-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary text-primary-foreground">
-              <Brain className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Manager's Dashboard</h2>
-              <p className="text-sm text-muted-foreground">
-                {user?.department ? `${user.department} Department` : 'Employee transition management'}
-              </p>
-            </div>
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">Transition Hub</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Monitor and manage all employee transitions
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <ExportButton title="Export Report" />
@@ -261,35 +271,35 @@ export const HRManagerDashboard: React.FC = () => {
             {/* Create Handover Dialog */}
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="w-4 h-4 mr-1.5" />
+                <Button size="sm" className="h-9">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
                   New Handover
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Create New Handover</DialogTitle>
+                  <DialogTitle>Create Handover</DialogTitle>
                   <DialogDescription>Set up a new knowledge transfer process</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Exiting Employee</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Exiting Employee</Label>
                     <Select value={formData.exitingEmployee} onValueChange={(v) => setFormData({...formData, exitingEmployee: v})}>
-                      <SelectTrigger><SelectValue placeholder="Select exiting employee" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
                       <SelectContent>
                         {exitingEmployees.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} - {u.department || 'No Dept'}</SelectItem>
+                          <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} — {u.department || 'No Dept'}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Successor (Optional)</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Successor (Optional)</Label>
                     <Select value={formData.successor} onValueChange={(v) => setFormData({...formData, successor: v})}>
                       <SelectTrigger><SelectValue placeholder="Select successor" /></SelectTrigger>
                       <SelectContent>
                         {filteredSuccessors.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} - {u.department || 'No Dept'}</SelectItem>
+                          <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} — {u.department || 'No Dept'}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -307,7 +317,7 @@ export const HRManagerDashboard: React.FC = () => {
             {/* Add Exiting Employee Dialog */}
             <Dialog open={isAddExitingModalOpen} onOpenChange={setIsAddExitingModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm"><UserPlus className="w-4 h-4 mr-1.5" />Add Employee</Button>
+                <Button variant="outline" size="sm" className="h-9"><UserPlus className="w-3.5 h-3.5 mr-1.5" />Add Employee</Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
@@ -315,26 +325,26 @@ export const HRManagerDashboard: React.FC = () => {
                   <DialogDescription>Add a departing employee and send them a signup email</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Email Address</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Email Address</Label>
                     <Input type="email" value={newUserData.email} onChange={(e) => setNewUserData({...newUserData, email: e.target.value})} placeholder="employee@company.com" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Role</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Role</Label>
                     <Select value={newUserData.role} onValueChange={(v) => setNewUserData({...newUserData, role: v})}>
                       <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
                       <SelectContent><SelectItem value="exiting">Exiting Employee</SelectItem></SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Department</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Department</Label>
                     <Select value={newUserData.department} onValueChange={(v) => setNewUserData({...newUserData, department: v})}>
                       <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
                       <SelectContent>{departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Password</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Password</Label>
                     <Input type="password" value={newUserData.password} onChange={(e) => setNewUserData({...newUserData, password: e.target.value})} placeholder="Enter password" />
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -350,7 +360,7 @@ export const HRManagerDashboard: React.FC = () => {
             {/* Add Successor Dialog */}
             <Dialog open={isAddSuccessorModalOpen} onOpenChange={setIsAddSuccessorModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm"><UserPlus className="w-4 h-4 mr-1.5" />Add Successor</Button>
+                <Button variant="outline" size="sm" className="h-9"><UserPlus className="w-3.5 h-3.5 mr-1.5" />Add Successor</Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
@@ -358,26 +368,26 @@ export const HRManagerDashboard: React.FC = () => {
                   <DialogDescription>Add a new successor and send them a signup email</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Email Address</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Email Address</Label>
                     <Input type="email" value={newUserData.email} onChange={(e) => setNewUserData({...newUserData, email: e.target.value})} placeholder="successor@company.com" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Role</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Role</Label>
                     <Select value={newUserData.role} onValueChange={(v) => setNewUserData({...newUserData, role: v})}>
                       <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
                       <SelectContent><SelectItem value="successor">Successor</SelectItem></SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Department</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Department</Label>
                     <Select value={newUserData.department} onValueChange={(v) => setNewUserData({...newUserData, department: v})}>
                       <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
                       <SelectContent>{departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Password</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Password</Label>
                     <Input type="password" value={newUserData.password} onChange={(e) => setNewUserData({...newUserData, password: e.target.value})} placeholder="Enter password" />
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -392,36 +402,74 @@ export const HRManagerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Stat Pills */}
-        <div className="flex flex-wrap gap-2">
-          <StatPill icon={<BarChart3 className="h-4 w-4 text-primary" />} value={`${stats.overallProgress}%`} label="Progress" />
-          <StatPill icon={<UserX className="h-4 w-4 text-warning" />} value={stats.exitingEmployees} label="Exiting" />
-          <StatPill icon={<UserCheck className="h-4 w-4 text-primary" />} value={stats.successorsAssigned} label="Successors" />
-          <StatPill icon={<CheckCircle2 className="h-4 w-4 text-success" />} value={stats.completedHandovers} label="Completed" variant="success" />
-          <StatPill icon={<AlertTriangle className="h-4 w-4 text-critical" />} value={stats.highRiskCount} label="At Risk" variant={stats.highRiskCount > 0 ? 'critical' : undefined} />
+        {/* Metric Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <MetricCard icon={<BarChart3 className="h-4 w-4" />} value={`${stats.overallProgress}%`} label="Overall Progress" />
+          <MetricCard icon={<UserX className="h-4 w-4" />} value={stats.exitingEmployees} label="Exiting" />
+          <MetricCard icon={<UserCheck className="h-4 w-4" />} value={stats.successorsAssigned} label="Successors" />
+          <MetricCard icon={<CheckCircle2 className="h-4 w-4" />} value={stats.completedHandovers} label="Completed" variant="success" />
+          <MetricCard icon={<AlertTriangle className="h-4 w-4" />} value={stats.highRiskCount} label="At Risk" variant={stats.highRiskCount > 0 ? 'critical' : undefined} />
         </div>
       </div>
 
       {/* Error Banner */}
       {hasErrors && (
-        <div className="rounded-lg border border-critical/20 bg-critical/5 px-4 py-3 text-sm text-critical flex items-center gap-2">
+        <div className="rounded-lg border border-critical/20 bg-critical-soft px-4 py-3 text-sm text-critical flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 flex-shrink-0" />
           Failed to load some data. Please refresh.
         </div>
       )}
 
+      {/* KT Approval Requests — Prominent banner */}
+      {pendingKTApprovals.length > 0 && (
+        <Card className="border-success/30 bg-success/5 enterprise-shadow-md">
+          <CardContent className="p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+                <ShieldCheck className="h-4 w-4 text-success" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">KT Approval Required</h3>
+                <p className="text-xs text-muted-foreground">{pendingKTApprovals.length} handover{pendingKTApprovals.length > 1 ? 's' : ''} ready for closure</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {pendingKTApprovals.map(req => (
+                <div key={req.id} className="flex items-center justify-between gap-4 bg-card rounded-lg p-3 border border-success/20">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{req.task?.title || 'Handover'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{req.message}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {new Date(req.created_at).toLocaleDateString()} at {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="flex-shrink-0 bg-success hover:bg-success/90 text-success-foreground h-8"
+                    onClick={() => handleApproveKT(req.id)}
+                  >
+                    <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
+                    Approve KT
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="handovers">
+        <TabsList className="w-full justify-start bg-muted/50 p-1">
+          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+          <TabsTrigger value="handovers" className="text-xs">
             Handovers
-            <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{handovers.length}</Badge>
+            <Badge variant="secondary" className="ml-1.5 h-4 px-1.5 text-[10px]">{handovers.length}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="escalations">
+          <TabsTrigger value="escalations" className="text-xs">
             Escalations
             {pendingEscalations > 0 && (
-              <Badge variant="destructive" className="ml-1.5 h-5 px-1.5 text-[10px]">{pendingEscalations}</Badge>
+              <Badge variant="destructive" className="ml-1.5 h-4 px-1.5 text-[10px]">{pendingEscalations}</Badge>
             )}
           </TabsTrigger>
         </TabsList>
@@ -429,32 +477,32 @@ export const HRManagerDashboard: React.FC = () => {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-5">
           {attentionCount > 0 && (
-            <Card className="border-warning/30 bg-warning/5">
+            <Card className="border-warning/20 bg-warning-soft enterprise-shadow">
               <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-warning">
+                <div className="flex items-center gap-2 text-sm font-medium text-warning">
                   <Zap className="h-4 w-4" />
                   {attentionCount} item{attentionCount > 1 ? 's' : ''} need attention
                 </div>
                 <div className="space-y-2">
                   {needsAttention.noSuccessor.map(h => (
-                    <div key={h.id} className="flex items-center gap-2 text-sm bg-card rounded-md px-3 py-2 border">
+                    <div key={h.id} className="flex items-center gap-2 text-sm bg-card rounded-lg px-3 py-2.5 border">
                       <UserX className="h-3.5 w-3.5 text-critical flex-shrink-0" />
-                      <span className="font-medium">{h.exitingEmployee}</span>
-                      <span className="text-muted-foreground">— no successor assigned</span>
+                      <span className="font-medium text-foreground">{h.exitingEmployee}</span>
+                      <span className="text-muted-foreground text-xs">— no successor assigned</span>
                     </div>
                   ))}
                   {needsAttention.lowProgress.map(h => (
-                    <div key={h.id} className="flex items-center gap-2 text-sm bg-card rounded-md px-3 py-2 border">
+                    <div key={h.id} className="flex items-center gap-2 text-sm bg-card rounded-lg px-3 py-2.5 border">
                       <TrendingDown className="h-3.5 w-3.5 text-warning flex-shrink-0" />
-                      <span className="font-medium">{h.exitingEmployee} → {h.successor}</span>
-                      <span className="text-muted-foreground">— only {h.progress}% complete</span>
+                      <span className="font-medium text-foreground">{h.exitingEmployee} → {h.successor}</span>
+                      <span className="text-muted-foreground text-xs">— only {h.progress}% complete</span>
                     </div>
                   ))}
                   {pendingEscalations > 0 && (
-                    <div className="flex items-center gap-2 text-sm bg-card rounded-md px-3 py-2 border">
+                    <div className="flex items-center gap-2 text-sm bg-card rounded-lg px-3 py-2.5 border">
                       <HelpCircle className="h-3.5 w-3.5 text-warning flex-shrink-0" />
-                      <span className="font-medium">{pendingEscalations} pending escalation{pendingEscalations > 1 ? 's' : ''}</span>
-                      <span className="text-muted-foreground">from successors</span>
+                      <span className="font-medium text-foreground">{pendingEscalations} pending escalation{pendingEscalations > 1 ? 's' : ''}</span>
+                      <span className="text-muted-foreground text-xs">from successors</span>
                     </div>
                   )}
                 </div>
@@ -463,8 +511,8 @@ export const HRManagerDashboard: React.FC = () => {
           )}
 
           {/* AI Insights */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Brain className="h-4 w-4 text-primary" />
               AI Insights
             </div>
@@ -475,15 +523,15 @@ export const HRManagerDashboard: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">No AI insights available yet.</p>
+              <p className="text-sm text-muted-foreground py-6 text-center">No AI insights available yet.</p>
             )}
           </div>
 
           {/* Quick Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card className="bg-card"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-foreground">{stats.inProgressHandovers}</div><div className="text-xs text-muted-foreground">In Progress</div></CardContent></Card>
-            <Card className="bg-card"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-foreground">{handovers.filter(h => h.status === 'review').length}</div><div className="text-xs text-muted-foreground">In Review</div></CardContent></Card>
-            <Card className="bg-card"><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-success">{stats.completedHandovers}</div><div className="text-xs text-muted-foreground">Completed</div></CardContent></Card>
+            <Card className="enterprise-shadow"><CardContent className="p-4 text-center"><div className="text-2xl font-semibold text-foreground">{stats.inProgressHandovers}</div><div className="text-xs text-muted-foreground mt-0.5">In Progress</div></CardContent></Card>
+            <Card className="enterprise-shadow"><CardContent className="p-4 text-center"><div className="text-2xl font-semibold text-foreground">{handovers.filter(h => h.status === 'review').length}</div><div className="text-xs text-muted-foreground mt-0.5">In Review</div></CardContent></Card>
+            <Card className="enterprise-shadow"><CardContent className="p-4 text-center"><div className="text-2xl font-semibold text-success">{stats.completedHandovers}</div><div className="text-xs text-muted-foreground mt-0.5">Completed</div></CardContent></Card>
           </div>
         </TabsContent>
 
@@ -492,10 +540,10 @@ export const HRManagerDashboard: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by name or email..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
+              <Input placeholder="Search by name or email..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 h-9" />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-40 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="in-progress">In Progress</SelectItem>
@@ -510,8 +558,8 @@ export const HRManagerDashboard: React.FC = () => {
                 <HandoverRow key={h.id} handover={h} expanded={expandedHandover === h.id} onToggle={() => setExpandedHandover(expandedHandover === h.id ? null : h.id)} />
               ))
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Users className="h-10 w-10 mx-auto mb-2 opacity-40" />
+              <div className="text-center py-16 text-muted-foreground">
+                <Users className="h-8 w-8 mx-auto mb-3 opacity-30" />
                 <p className="text-sm">{searchQuery || statusFilter !== 'all' ? 'No handovers match your filters.' : 'No handovers yet. Create your first one.'}</p>
               </div>
             )}
@@ -520,7 +568,7 @@ export const HRManagerDashboard: React.FC = () => {
 
         {/* Escalations Tab */}
         <TabsContent value="escalations">
-          <HelpRequestsPanel requests={managerEscalations} loading={requestsLoading} onRespond={respondToRequest} title="Escalations from Successors" description="Successors need your help with these tasks" emptyMessage="No escalations at this time." viewerRole="manager" />
+          <HelpRequestsPanel requests={managerEscalations} loading={requestsLoading} onRespond={respondToRequest} title="Escalations & Approvals" description="Successor requests and KT approval actions" emptyMessage="No escalations at this time." viewerRole="manager" />
         </TabsContent>
       </Tabs>
     </div>
