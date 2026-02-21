@@ -115,18 +115,15 @@ export const AIInsightTitlesManager = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            AI Insight Section Titles
-          </CardTitle>
-          <CardDescription>
-            Configure the titles for AI insight sections displayed on the Successor Dashboard.
-            These titles will be used both in the UI and when generating AI insights via ChatGPT.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          AI Insight Section Titles
+        </h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Configure titles for AI insight sections on the Successor Dashboard and ChatGPT prompts.
+        </p>
+      </div>
 
       <div className="grid gap-6">
         {DEPARTMENTS.map(dept => {
@@ -144,7 +141,7 @@ export const AIInsightTitlesManager = () => {
           }
 
           return (
-            <Card key={dept} className={config.isEditing ? 'ring-2 ring-primary/20' : ''}>
+            <Card key={dept} className={`glass-panel transition-all duration-150 ${config.isEditing ? 'ring-2 ring-primary/20 enterprise-shadow' : ''}`}>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{dept}</CardTitle>
