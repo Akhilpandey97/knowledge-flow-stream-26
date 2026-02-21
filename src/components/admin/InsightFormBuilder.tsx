@@ -341,22 +341,22 @@ const InsightFormBuilder = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Insight Form Builder</h2>
-          <p className="text-muted-foreground">Create and manage dynamic forms for insight collection</p>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Insight Form Builder</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Create and manage dynamic forms for insight collection</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Templates List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Form Templates</CardTitle>
-            <CardDescription>Manage insight collection form templates</CardDescription>
+        <Card className="glass-panel">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Form Templates</CardTitle>
+            <CardDescription className="text-xs">Manage insight collection form templates</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* New Template Form */}
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
-              <h4 className="font-medium">Create New Template</h4>
+            <div className="space-y-3 p-4 border border-border/60 rounded-lg bg-muted/30">
+              <h4 className="text-sm font-medium text-foreground">Create New Template</h4>
               <div>
                 <Label htmlFor="name">Template Name</Label>
                 <Input
@@ -398,12 +398,12 @@ const InsightFormBuilder = () => {
             </div>
 
             {/* Templates List */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {templates.map((template) => (
                 <div
                   key={template.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedTemplate?.id === template.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                  className={`p-3 border rounded-lg cursor-pointer transition-all duration-150 ${
+                    selectedTemplate?.id === template.id ? 'border-primary bg-primary/5 enterprise-shadow' : 'border-border/40 hover:bg-muted/40 hover:border-border'
                   }`}
                   onClick={() => selectTemplate(template)}
                 >
@@ -433,7 +433,7 @@ const InsightFormBuilder = () => {
 
         {/* Form Fields */}
         {selectedTemplate && (
-          <Card>
+          <Card className="glass-panel">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -481,8 +481,8 @@ const InsightFormBuilder = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Add New Field */}
-              <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
-                <h4 className="font-medium">Add New Field</h4>
+              <div className="space-y-3 p-4 border border-border/60 rounded-lg bg-muted/30">
+                <h4 className="text-sm font-medium text-foreground">Add New Field</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label htmlFor="fieldType">Field Type</Label>

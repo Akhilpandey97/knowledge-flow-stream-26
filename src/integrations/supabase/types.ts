@@ -664,6 +664,45 @@ export type Database = {
           },
         ]
       }
+      tenants: {
+        Row: {
+          created_at: string
+          domain: string | null
+          id: string
+          logo_url: string | null
+          max_users: number
+          name: string
+          plan: string
+          settings: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          domain?: string | null
+          id?: string
+          logo_url?: string | null
+          max_users?: number
+          name: string
+          plan?: string
+          settings?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string | null
+          id?: string
+          logo_url?: string | null
+          max_users?: number
+          name?: string
+          plan?: string
+          settings?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_document_uploads: {
         Row: {
           created_at: string
@@ -701,6 +740,7 @@ export type Database = {
           email: string
           id: string
           role: string
+          tenant_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -708,6 +748,7 @@ export type Database = {
           email: string
           id?: string
           role: string
+          tenant_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -715,8 +756,17 @@ export type Database = {
           email?: string
           id?: string
           role?: string
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
