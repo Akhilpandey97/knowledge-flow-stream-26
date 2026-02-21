@@ -14,10 +14,11 @@ import {
   UserCheck, UserX, TrendingDown, CheckCircle2, Loader2, HelpCircle,
   Search, ChevronDown, ChevronUp, Zap, ArrowRight, Clock, Mail, Plus, UserPlus,
   CheckCheck, ShieldCheck, Send, Bell, Calendar, Shield, Activity,
-  MessageSquare, Eye, FileText, RefreshCw
+  MessageSquare, MessageCircle, Eye, FileText, RefreshCw
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
-import { HelpRequestsPanel } from './HelpRequestsPanel';
+import { WhatsAppChat } from './WhatsAppChat';
+import { AIChatBot, AIFloatingButton } from './AIChatBot';
 import { useHandoverStats } from '@/hooks/useHandoverStats';
 import { useHandoversList } from '@/hooks/useHandoversList';
 import { useAIInsightsForHR } from '@/hooks/useAIInsightsForHR';
@@ -37,6 +38,8 @@ export const HRManagerDashboard: React.FC = () => {
   const [nudgeModal, setNudgeModal] = useState<{ open: boolean; handover: any | null }>({ open: false, handover: null });
   const [nudgeMessage, setNudgeMessage] = useState('');
   const [nudgeSending, setNudgeSending] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -94,7 +97,6 @@ export const HRManagerDashboard: React.FC = () => {
     return list;
   }, [handovers, searchQuery, statusFilter]);
 
-  // Department health
   const departmentHealth = useMemo(() => {
     const deptMap: Record<string, { total: number; avgProgress: number; atRisk: number; completed: number }> = {};
     handovers.forEach(h => {
@@ -106,11 +108,9 @@ export const HRManagerDashboard: React.FC = () => {
       if (h.progress >= 90) deptMap[dept].completed++;
     });
     return Object.entries(deptMap).map(([dept, data]) => ({
-      department: dept,
-      total: data.total,
+      department: dept, total: data.total,
       avgProgress: data.total > 0 ? Math.round(data.avgProgress / data.total) : 0,
-      atRisk: data.atRisk,
-      completed: data.completed,
+      atRisk: data.atRisk, completed: data.completed,
     })).sort((a, b) => b.total - a.total);
   }, [handovers]);
 
@@ -129,9 +129,7 @@ export const HRManagerDashboard: React.FC = () => {
       setFormData({ exitingEmployee: '', successor: '', department: '' });
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to create handover", variant: "destructive" });
-    } finally {
-      setActionLoading(false);
-    }
+    } finally { setActionLoading(false); }
   };
 
   const handleAddUser = async (role: 'exiting' | 'successor') => {
@@ -145,16 +143,14 @@ export const HRManagerDashboard: React.FC = () => {
         body: { email: newUserData.email, role: newUserData.role, department: newUserData.department, password: newUserData.password },
       });
       if (emailError) throw emailError;
-      toast({ title: "Success", description: `${role === 'exiting' ? 'Exiting employee' : 'Successor'} invited successfully!` });
+      toast({ title: "Success", description: `${role === 'exiting' ? 'Exiting employee' : 'Successor'} invited!` });
       setNewUserData({ email: '', role: '', department: '', password: '' });
       if (role === 'exiting') setIsAddExitingModalOpen(false);
       else setIsAddSuccessorModalOpen(false);
       refetchUsers();
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to add user", variant: "destructive" });
-    } finally {
-      setActionLoading(false);
-    }
+    } finally { setActionLoading(false); }
   };
 
   const handleApproveKT = async (requestId: string) => {
@@ -166,25 +162,18 @@ export const HRManagerDashboard: React.FC = () => {
     if (!nudgeModal.handover || !nudgeMessage.trim()) return;
     setNudgeSending(true);
     try {
-      // Log the nudge as an activity
       await supabase.rpc('log_activity', {
         p_action: 'manager_nudge',
         p_resource_type: 'handover',
         p_resource_id: nudgeModal.handover.id,
-        p_details: { 
-          message: nudgeMessage, 
-          target: nudgeModal.handover.exitingEmployeeEmail,
-          handover_progress: nudgeModal.handover.progress
-        }
+        p_details: { message: nudgeMessage, target: nudgeModal.handover.exitingEmployeeEmail, handover_progress: nudgeModal.handover.progress }
       });
       toast({ title: "Reminder Sent", description: `Nudge sent for ${nudgeModal.handover.exitingEmployee}'s handover.` });
       setNudgeModal({ open: false, handover: null });
       setNudgeMessage('');
     } catch (error) {
       toast({ title: "Error", description: "Failed to send reminder", variant: "destructive" });
-    } finally {
-      setNudgeSending(false);
-    }
+    } finally { setNudgeSending(false); }
   };
 
   if (isLoading) {
@@ -194,10 +183,7 @@ export const HRManagerDashboard: React.FC = () => {
           <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">Loading dashboard</p>
-            <p className="text-xs text-muted-foreground mt-1">Aggregating transition data...</p>
-          </div>
+          <p className="text-sm font-medium text-foreground">Loading dashboard</p>
         </div>
       </div>
     );
@@ -219,18 +205,14 @@ export const HRManagerDashboard: React.FC = () => {
               <span className="text-xs font-medium text-primary uppercase tracking-widest">Command Center</span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Transition Hub</h1>
-            <p className="text-muted-foreground max-w-lg">
-              Monitor, manage, and accelerate all employee knowledge transfers across your organization.
-            </p>
+            <p className="text-muted-foreground max-w-lg">Monitor, manage, and accelerate all employee knowledge transfers.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <ExportButton title="Export Report" variant="outline" size="sm" />
             
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="gap-1.5 enterprise-shadow">
-                  <Plus className="w-4 h-4" /> New Handover
-                </Button>
+                <Button size="sm" className="gap-1.5 enterprise-shadow"><Plus className="w-4 h-4" /> New Handover</Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
@@ -242,22 +224,14 @@ export const HRManagerDashboard: React.FC = () => {
                     <Label className="text-xs font-medium">Exiting Employee</Label>
                     <Select value={formData.exitingEmployee} onValueChange={(v) => setFormData({...formData, exitingEmployee: v})}>
                       <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
-                      <SelectContent>
-                        {exitingEmployees.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} — {u.department || 'No Dept'}</SelectItem>
-                        ))}
-                      </SelectContent>
+                      <SelectContent>{exitingEmployees.map((u) => <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} — {u.department || 'No Dept'}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Successor (Optional)</Label>
                     <Select value={formData.successor} onValueChange={(v) => setFormData({...formData, successor: v})}>
                       <SelectTrigger><SelectValue placeholder="Select successor" /></SelectTrigger>
-                      <SelectContent>
-                        {filteredSuccessors.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} — {u.department || 'No Dept'}</SelectItem>
-                        ))}
-                      </SelectContent>
+                      <SelectContent>{filteredSuccessors.map((u) => <SelectItem key={u.id} value={u.id}>{u.email.split('@')[0]} — {u.department || 'No Dept'}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -271,14 +245,9 @@ export const HRManagerDashboard: React.FC = () => {
             </Dialog>
 
             <Dialog open={isAddExitingModalOpen} onOpenChange={setIsAddExitingModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5"><UserPlus className="w-3.5 h-3.5" />Add Employee</Button>
-              </DialogTrigger>
+              <DialogTrigger asChild><Button variant="outline" size="sm" className="gap-1.5"><UserPlus className="w-3.5 h-3.5" />Add Employee</Button></DialogTrigger>
               <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-lg font-bold">Add Exiting Employee</DialogTitle>
-                  <DialogDescription>Add a departing employee and send them a signup email</DialogDescription>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>Add Exiting Employee</DialogTitle><DialogDescription>Send signup email</DialogDescription></DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-1.5"><Label className="text-xs font-medium">Email</Label><Input type="email" value={newUserData.email} onChange={(e) => setNewUserData({...newUserData, email: e.target.value})} placeholder="employee@company.com" /></div>
                   <div className="space-y-1.5"><Label className="text-xs font-medium">Role</Label><Select value={newUserData.role} onValueChange={(v) => setNewUserData({...newUserData, role: v})}><SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger><SelectContent><SelectItem value="exiting">Exiting Employee</SelectItem></SelectContent></Select></div>
@@ -290,14 +259,9 @@ export const HRManagerDashboard: React.FC = () => {
             </Dialog>
 
             <Dialog open={isAddSuccessorModalOpen} onOpenChange={setIsAddSuccessorModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5"><UserPlus className="w-3.5 h-3.5" />Add Successor</Button>
-              </DialogTrigger>
+              <DialogTrigger asChild><Button variant="outline" size="sm" className="gap-1.5"><UserPlus className="w-3.5 h-3.5" />Add Successor</Button></DialogTrigger>
               <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-lg font-bold">Add Successor</DialogTitle>
-                  <DialogDescription>Add a new successor and send them a signup email</DialogDescription>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>Add Successor</DialogTitle><DialogDescription>Send signup email</DialogDescription></DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-1.5"><Label className="text-xs font-medium">Email</Label><Input type="email" value={newUserData.email} onChange={(e) => setNewUserData({...newUserData, email: e.target.value})} placeholder="successor@company.com" /></div>
                   <div className="space-y-1.5"><Label className="text-xs font-medium">Role</Label><Select value={newUserData.role} onValueChange={(v) => setNewUserData({...newUserData, role: v})}><SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger><SelectContent><SelectItem value="successor">Successor</SelectItem></SelectContent></Select></div>
@@ -334,7 +298,6 @@ export const HRManagerDashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* Error Banner */}
       {hasErrors && (
         <Card className="border-critical/20 bg-critical/5">
           <CardContent className="p-4 flex items-center gap-3">
@@ -347,7 +310,7 @@ export const HRManagerDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* KT Approval Requests — Prominent */}
+      {/* KT Approval Requests */}
       {pendingKTApprovals.length > 0 && (
         <Card className="enterprise-shadow-md overflow-hidden border-success/30">
           <CardContent className="p-0">
@@ -358,7 +321,7 @@ export const HRManagerDashboard: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-foreground">KT Approval Required</h3>
-                  <p className="text-xs text-muted-foreground">{pendingKTApprovals.length} handover{pendingKTApprovals.length > 1 ? 's' : ''} ready for official closure</p>
+                  <p className="text-xs text-muted-foreground">{pendingKTApprovals.length} handover{pendingKTApprovals.length > 1 ? 's' : ''} ready for closure</p>
                 </div>
               </div>
               <div className="space-y-2">
@@ -367,18 +330,10 @@ export const HRManagerDashboard: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">{req.task?.title || 'Handover Completion'}</p>
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{req.message}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(req.created_at).toLocaleDateString()} at {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
                     </div>
-                    <Button 
-                      size="sm" 
-                      className="flex-shrink-0 bg-success hover:bg-success/90 text-success-foreground h-9 px-4 gap-1.5"
-                      onClick={() => handleApproveKT(req.id)}
-                    >
-                      <CheckCheck className="h-4 w-4" />
-                      Approve & Close
+                    <Button size="sm" className="flex-shrink-0 bg-success hover:bg-success/90 text-success-foreground h-9 px-4 gap-1.5"
+                      onClick={() => handleApproveKT(req.id)}>
+                      <CheckCheck className="h-4 w-4" /> Approve & Close
                     </Button>
                   </div>
                 ))}
@@ -403,15 +358,12 @@ export const HRManagerDashboard: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="escalations" className="text-xs gap-1.5 data-[state=active]:enterprise-shadow">
             <MessageSquare className="h-3.5 w-3.5" /> Escalations
-            {pendingEscalations > 0 && (
-              <Badge variant="destructive" className="ml-1 h-4 px-1.5 text-[10px]">{pendingEscalations}</Badge>
-            )}
+            {pendingEscalations > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1.5 text-[10px]">{pendingEscalations}</Badge>}
           </TabsTrigger>
         </TabsList>
 
-        {/* ===== OVERVIEW TAB ===== */}
+        {/* OVERVIEW TAB */}
         <TabsContent value="overview" className="space-y-6">
-          {/* Needs Attention */}
           {attentionCount > 0 && (
             <Card className="enterprise-shadow-md overflow-hidden border-warning/20">
               <CardContent className="p-0">
@@ -421,19 +373,17 @@ export const HRManagerDashboard: React.FC = () => {
                       <Zap className="h-5 w-5 text-warning" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-foreground">{attentionCount} item{attentionCount > 1 ? 's' : ''} need your attention</h3>
+                      <h3 className="text-sm font-bold text-foreground">{attentionCount} items need attention</h3>
                       <p className="text-xs text-muted-foreground">Take action to keep transitions on track</p>
                     </div>
                   </div>
                   <div className="space-y-2">
                     {needsAttention.noSuccessor.map(h => (
                       <div key={h.id} className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border enterprise-shadow">
-                        <div className="h-8 w-8 rounded-lg bg-critical/10 flex items-center justify-center flex-shrink-0">
-                          <UserX className="h-4 w-4 text-critical" />
-                        </div>
+                        <UserX className="h-4 w-4 text-critical flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <span className="font-semibold text-sm text-foreground">{h.exitingEmployee}</span>
-                          <span className="text-xs text-muted-foreground ml-2">No successor assigned</span>
+                          <span className="text-xs text-muted-foreground ml-2">No successor</span>
                         </div>
                         <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => { setFormData({ ...formData, exitingEmployee: '' }); setIsCreateModalOpen(true); }}>
                           <UserPlus className="h-3 w-3" /> Assign
@@ -442,27 +392,21 @@ export const HRManagerDashboard: React.FC = () => {
                     ))}
                     {needsAttention.lowProgress.map(h => (
                       <div key={h.id} className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border enterprise-shadow">
-                        <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center flex-shrink-0">
-                          <TrendingDown className="h-4 w-4 text-warning" />
-                        </div>
+                        <TrendingDown className="h-4 w-4 text-warning flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <span className="font-semibold text-sm text-foreground">{h.exitingEmployee} → {h.successor}</span>
-                          <span className="text-xs text-muted-foreground ml-2">Only {h.progress}% complete</span>
+                          <span className="text-xs text-muted-foreground ml-2">{h.progress}%</span>
                         </div>
-                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => { setNudgeModal({ open: true, handover: h }); setNudgeMessage(`Hi ${h.exitingEmployee}, your handover is at ${h.progress}% progress. Please prioritize completing your knowledge transfer tasks.`); }}>
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => { setNudgeModal({ open: true, handover: h }); setNudgeMessage(`Hi ${h.exitingEmployee}, your handover is at ${h.progress}%. Please prioritize completing your knowledge transfer.`); }}>
                           <Bell className="h-3 w-3" /> Nudge
                         </Button>
                       </div>
                     ))}
                     {pendingEscalations > 0 && (
-                      <div className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border enterprise-shadow">
-                        <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center flex-shrink-0">
-                          <HelpCircle className="h-4 w-4 text-warning" />
-                        </div>
-                        <div className="flex-1">
-                          <span className="font-semibold text-sm text-foreground">{pendingEscalations} pending escalation{pendingEscalations > 1 ? 's' : ''}</span>
-                          <span className="text-xs text-muted-foreground ml-2">from successors</span>
-                        </div>
+                      <div className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border enterprise-shadow cursor-pointer" onClick={() => setChatOpen(true)}>
+                        <HelpCircle className="h-4 w-4 text-warning flex-shrink-0" />
+                        <span className="font-semibold text-sm text-foreground">{pendingEscalations} pending escalation{pendingEscalations > 1 ? 's' : ''}</span>
+                        <Badge variant="outline" className="text-[10px] ml-auto">View Chat</Badge>
                       </div>
                     )}
                   </div>
@@ -471,16 +415,13 @@ export const HRManagerDashboard: React.FC = () => {
             </Card>
           )}
 
-          {/* AI Insights */}
           {insights.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Brain className="h-4 w-4 text-primary" />
-                </div>
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><Brain className="h-4 w-4 text-primary" /></div>
                 <div>
                   <h3 className="text-sm font-bold text-foreground">AI Insights</h3>
-                  <p className="text-xs text-muted-foreground">Machine-generated recommendations based on transition data</p>
+                  <p className="text-xs text-muted-foreground">Machine-generated recommendations</p>
                 </div>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
@@ -488,12 +429,10 @@ export const HRManagerDashboard: React.FC = () => {
                   <div key={i} className={`flex-shrink-0 w-64 rounded-xl border p-4 space-y-2 enterprise-shadow ${
                     insight.priority === 'critical' ? 'border-critical/20 bg-critical/3' :
                     insight.priority === 'high' ? 'border-warning/20 bg-warning/3' :
-                    insight.priority === 'positive' ? 'border-success/20 bg-success/3' :
-                    'border-primary/20 bg-primary/3'
+                    insight.priority === 'positive' ? 'border-success/20 bg-success/3' : 'border-primary/20 bg-primary/3'
                   }`}>
                     <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      <Sparkles className="h-3 w-3" />
-                      {insight.type}
+                      <Sparkles className="h-3 w-3" />{insight.type}
                     </div>
                     <p className="text-sm font-semibold text-foreground leading-snug">{insight.title}</p>
                     <p className="text-xs text-muted-foreground line-clamp-2">{insight.description}</p>
@@ -503,7 +442,6 @@ export const HRManagerDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Pipeline Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             {[
               { label: 'Not Started', value: handovers.filter(h => h.progress === 0).length, color: 'text-muted-foreground', bg: 'bg-muted/50' },
@@ -521,12 +459,12 @@ export const HRManagerDashboard: React.FC = () => {
           </div>
         </TabsContent>
 
-        {/* ===== HANDOVERS TAB ===== */}
+        {/* HANDOVERS TAB */}
         <TabsContent value="handovers" className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by name, email, or department..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 h-10" />
+              <Input placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 h-10" />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-44 h-10"><SelectValue /></SelectTrigger>
@@ -543,14 +481,11 @@ export const HRManagerDashboard: React.FC = () => {
             {filteredHandovers.length > 0 ? (
               filteredHandovers.map(h => {
                 const isExpanded = expandedHandover === h.id;
-                const progressVariant = h.progress >= 80 ? 'success' : h.progress >= 50 ? 'warning' : 'critical';
-                
                 return (
                   <Card key={h.id} className={`enterprise-shadow overflow-hidden transition-all ${isExpanded ? 'ring-1 ring-primary/20 enterprise-shadow-md' : ''} ${
                     h.aiRiskLevel === 'critical' ? 'border-l-4 border-l-critical' :
                     h.aiRiskLevel === 'high' ? 'border-l-4 border-l-warning' :
-                    h.progress >= 90 ? 'border-l-4 border-l-success' :
-                    'border-l-4 border-l-border'
+                    h.progress >= 90 ? 'border-l-4 border-l-success' : 'border-l-4 border-l-border'
                   }`}>
                     <div className="flex items-center gap-4 p-5 cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => setExpandedHandover(isExpanded ? null : h.id)}>
                       <div className="flex-1 min-w-0">
@@ -565,7 +500,7 @@ export const HRManagerDashboard: React.FC = () => {
                         </div>
                       </div>
                       <div className="w-32 hidden sm:block space-y-1.5">
-                        <Progress value={h.progress} variant={progressVariant as any} className="h-2" />
+                        <Progress value={h.progress} className="h-2" />
                         <span className="text-xs font-medium text-muted-foreground">{h.progress}%</span>
                       </div>
                       <Badge variant="outline" className={`text-[10px] px-2 py-0.5 font-semibold ${
@@ -573,38 +508,16 @@ export const HRManagerDashboard: React.FC = () => {
                         h.aiRiskLevel === 'high' ? 'border-warning/40 text-warning bg-warning/5' :
                         h.aiRiskLevel === 'low' ? 'border-success/40 text-success bg-success/5' :
                         'border-primary/40 text-primary bg-primary/5'
-                      }`}>
-                        {h.aiRiskLevel} risk
-                      </Badge>
+                      }`}>{h.aiRiskLevel} risk</Badge>
                       {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                     </div>
                     {isExpanded && (
                       <div className="border-t bg-muted/10 p-5 space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="flex items-center gap-2.5">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Exiting Employee</p>
-                              <p className="text-xs text-foreground">{h.exitingEmployeeEmail}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2.5">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Successor</p>
-                              <p className="text-xs text-foreground">{h.successorEmail || 'Not assigned'}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2.5">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Created</p>
-                              <p className="text-xs text-foreground">{new Date(h.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                            </div>
-                          </div>
+                          <div className="flex items-center gap-2.5"><Mail className="h-4 w-4 text-muted-foreground" /><div><p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Exiting</p><p className="text-xs text-foreground">{h.exitingEmployeeEmail}</p></div></div>
+                          <div className="flex items-center gap-2.5"><Mail className="h-4 w-4 text-muted-foreground" /><div><p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Successor</p><p className="text-xs text-foreground">{h.successorEmail || 'Not assigned'}</p></div></div>
+                          <div className="flex items-center gap-2.5"><Calendar className="h-4 w-4 text-muted-foreground" /><div><p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Created</p><p className="text-xs text-foreground">{new Date(h.createdAt).toLocaleDateString()}</p></div></div>
                         </div>
-                        
-                        {/* AI Recommendation */}
                         <div className="bg-primary/3 border border-primary/10 rounded-xl p-4 flex items-start gap-3">
                           <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                           <div>
@@ -612,16 +525,10 @@ export const HRManagerDashboard: React.FC = () => {
                             <p className="text-xs text-foreground">{h.aiRecommendation}</p>
                           </div>
                         </div>
-
-                        {/* Actions */}
                         <div className="flex flex-wrap gap-2 pt-1">
                           <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 hover:bg-warning/5 hover:text-warning hover:border-warning/30"
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setNudgeModal({ open: true, handover: h }); 
-                              setNudgeMessage(`Hi ${h.exitingEmployee}, your handover is at ${h.progress}% progress. Please prioritize completing your knowledge transfer tasks.`); 
-                            }}>
-                            <Bell className="h-3.5 w-3.5" /> Send Reminder
+                            onClick={(e) => { e.stopPropagation(); setNudgeModal({ open: true, handover: h }); setNudgeMessage(`Hi ${h.exitingEmployee}, your handover is at ${h.progress}%. Please prioritize.`); }}>
+                            <Bell className="h-3.5 w-3.5" /> Reminder
                           </Button>
                           {!h.successorEmail && (
                             <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
@@ -638,31 +545,24 @@ export const HRManagerDashboard: React.FC = () => {
             ) : (
               <Card className="enterprise-shadow-md">
                 <CardContent className="p-16 text-center space-y-4">
-                  <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto">
-                    <Users className="h-7 w-7 text-muted-foreground/40" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">No Handovers Found</p>
-                    <p className="text-xs text-muted-foreground mt-1">{searchQuery || statusFilter !== 'all' ? 'No handovers match your filters.' : 'Create your first handover to get started.'}</p>
-                  </div>
+                  <Users className="h-7 w-7 text-muted-foreground/40 mx-auto" />
+                  <p className="text-sm font-semibold text-foreground">No Handovers Found</p>
+                  <p className="text-xs text-muted-foreground">{searchQuery || statusFilter !== 'all' ? 'No matches.' : 'Create your first handover.'}</p>
                 </CardContent>
               </Card>
             )}
           </div>
         </TabsContent>
 
-        {/* ===== DEPARTMENTS TAB ===== */}
+        {/* DEPARTMENTS TAB */}
         <TabsContent value="departments" className="space-y-4">
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BarChart3 className="h-4 w-4 text-primary" />
-            </div>
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><BarChart3 className="h-4 w-4 text-primary" /></div>
             <div>
               <h3 className="text-sm font-bold text-foreground">Department Health</h3>
-              <p className="text-xs text-muted-foreground">Knowledge transfer status by organizational unit</p>
+              <p className="text-xs text-muted-foreground">Knowledge transfer status by unit</p>
             </div>
           </div>
-          
           {departmentHealth.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {departmentHealth.map(dept => (
@@ -673,74 +573,86 @@ export const HRManagerDashboard: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <h4 className="text-base font-bold text-foreground">{dept.department}</h4>
-                        <p className="text-xs text-muted-foreground">{dept.total} active handover{dept.total > 1 ? 's' : ''}</p>
+                        <p className="text-xs text-muted-foreground">{dept.total} handover{dept.total > 1 ? 's' : ''}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-bold text-primary leading-none">{dept.avgProgress}%</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">avg progress</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">avg</p>
                       </div>
                     </div>
                     <Progress value={dept.avgProgress} className="h-2" />
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="text-center bg-muted/30 rounded-lg p-2">
-                        <p className="text-sm font-bold text-foreground">{dept.total}</p>
-                        <p className="text-[10px] text-muted-foreground">Total</p>
-                      </div>
-                      <div className="text-center bg-success/5 rounded-lg p-2">
-                        <p className="text-sm font-bold text-success">{dept.completed}</p>
-                        <p className="text-[10px] text-muted-foreground">Done</p>
-                      </div>
-                      <div className={`text-center rounded-lg p-2 ${dept.atRisk > 0 ? 'bg-critical/5' : 'bg-muted/30'}`}>
-                        <p className={`text-sm font-bold ${dept.atRisk > 0 ? 'text-critical' : 'text-muted-foreground'}`}>{dept.atRisk}</p>
-                        <p className="text-[10px] text-muted-foreground">At Risk</p>
-                      </div>
+                      <div className="text-center bg-muted/30 rounded-lg p-2"><p className="text-sm font-bold text-foreground">{dept.total}</p><p className="text-[10px] text-muted-foreground">Total</p></div>
+                      <div className="text-center bg-success/5 rounded-lg p-2"><p className="text-sm font-bold text-success">{dept.completed}</p><p className="text-[10px] text-muted-foreground">Done</p></div>
+                      <div className={`text-center rounded-lg p-2 ${dept.atRisk > 0 ? 'bg-critical/5' : 'bg-muted/30'}`}><p className={`text-sm font-bold ${dept.atRisk > 0 ? 'text-critical' : 'text-muted-foreground'}`}>{dept.atRisk}</p><p className="text-[10px] text-muted-foreground">At Risk</p></div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           ) : (
-            <Card className="enterprise-shadow">
-              <CardContent className="p-12 text-center">
-                <BarChart3 className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No department data available yet.</p>
-              </CardContent>
-            </Card>
+            <Card className="enterprise-shadow"><CardContent className="p-12 text-center"><BarChart3 className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" /><p className="text-sm text-muted-foreground">No department data yet.</p></CardContent></Card>
           )}
         </TabsContent>
 
-        {/* ===== ESCALATIONS TAB ===== */}
+        {/* ESCALATIONS TAB — WhatsApp style */}
         <TabsContent value="escalations">
-          <HelpRequestsPanel requests={managerEscalations} loading={requestsLoading} onRespond={respondToRequest} title="Escalations & Approvals" description="Successor requests and KT approval actions" emptyMessage="No escalations at this time." viewerRole="manager" />
+          <Card className="enterprise-shadow-md">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center"><MessageSquare className="h-5 w-5 text-warning" /></div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-foreground">Escalations & Approvals</h3>
+                  <p className="text-xs text-muted-foreground">{managerEscalations.length} total · {pendingEscalations} pending</p>
+                </div>
+                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setChatOpen(true)}>
+                  <MessageCircle className="h-3.5 w-3.5" /> Open Chat
+                </Button>
+              </div>
+
+              {/* Preview of recent escalations */}
+              <div className="space-y-2">
+                {managerEscalations.slice(0, 5).map(req => (
+                  <div key={req.id} className={`flex items-start gap-3 rounded-xl p-3 border cursor-pointer hover:bg-muted/20 transition-colors ${
+                    req.status === 'pending' ? 'border-warning/20 bg-warning/3' : 'border-border bg-card'
+                  }`} onClick={() => setChatOpen(true)}>
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      req.status === 'pending' ? 'bg-warning/15' : 'bg-success/15'
+                    }`}>
+                      <MessageSquare className={`h-4 w-4 ${req.status === 'pending' ? 'text-warning' : 'text-success'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground line-clamp-1">{req.task?.title || 'Handover Escalation'}</p>
+                      <p className="text-[11px] text-muted-foreground line-clamp-1">{req.message}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
+                        req.status === 'pending' ? 'border-warning/30 text-warning' : 'border-success/30 text-success'
+                      }`}>{req.status}</Badge>
+                    </div>
+                  </div>
+                ))}
+                {managerEscalations.length === 0 && (
+                  <div className="text-center py-8">
+                    <MessageSquare className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No escalations at this time</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Nudge / Reminder Modal */}
+      {/* Nudge Modal */}
       <Dialog open={nudgeModal.open} onOpenChange={(open) => { if (!open) { setNudgeModal({ open: false, handover: null }); setNudgeMessage(''); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Bell className="h-5 w-5 text-warning" /> Send Reminder
-            </DialogTitle>
-            <DialogDescription>
-              Nudge {nudgeModal.handover?.exitingEmployee} to prioritize their handover ({nudgeModal.handover?.progress}% complete)
-            </DialogDescription>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2"><Bell className="h-5 w-5 text-warning" /> Send Reminder</DialogTitle>
+            <DialogDescription>Nudge {nudgeModal.handover?.exitingEmployee} ({nudgeModal.handover?.progress}% complete)</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Reminder Message</Label>
-              <Textarea 
-                value={nudgeMessage}
-                onChange={(e) => setNudgeMessage(e.target.value)}
-                className="min-h-[100px] text-sm"
-                placeholder="Type your reminder..."
-              />
-            </div>
-            <div className="bg-muted/30 rounded-xl p-3 space-y-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Handover Details</p>
-              <p className="text-xs text-foreground">{nudgeModal.handover?.exitingEmployee} → {nudgeModal.handover?.successor}</p>
-              <p className="text-xs text-muted-foreground">{nudgeModal.handover?.department} · {nudgeModal.handover?.completedTasks}/{nudgeModal.handover?.taskCount} tasks</p>
-            </div>
+            <Textarea value={nudgeMessage} onChange={(e) => setNudgeMessage(e.target.value)} className="min-h-[100px] text-sm" placeholder="Type your reminder..." />
             <div className="flex gap-2 pt-1">
               <Button onClick={handleSendNudge} className="flex-1 gap-1.5" disabled={nudgeSending || !nudgeMessage.trim()}>
                 {nudgeSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -751,6 +663,28 @@ export const HRManagerDashboard: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* WhatsApp-style Escalations Chat */}
+      <WhatsAppChat
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        requests={managerEscalations}
+        onSendMessage={async () => {}}
+        onRespond={respondToRequest}
+        title="Escalations & Approvals"
+        subtitle={`${pendingEscalations} pending responses`}
+        currentUserRole="manager"
+      />
+
+      {/* AI Chatbot */}
+      <AIChatBot
+        isOpen={aiChatOpen}
+        onClose={() => setAiChatOpen(false)}
+        tasks={[]}
+        userRole="manager"
+        contextInfo={{ handoverProgress: stats.overallProgress }}
+      />
+      <AIFloatingButton onClick={() => setAiChatOpen(true)} />
     </div>
   );
 };
