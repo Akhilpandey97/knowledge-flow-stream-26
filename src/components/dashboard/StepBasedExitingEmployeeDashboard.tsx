@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { InsightCollectionModal } from './InsightCollectionModal';
 import { ZoomMeetingModal } from './ZoomMeetingModal';
-import { ExpandableText } from '@/components/ui/expandable-text';
+import { WhatsAppChat } from './WhatsAppChat';
+import { AIChatBot, AIFloatingButton } from './AIChatBot';
 
 import { useHandover } from '@/hooks/useHandover';
 import { useHelpRequests } from '@/hooks/useHelpRequests';
@@ -28,9 +29,9 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const [editingInsight, setEditingInsight] = useState<TaskInsight | null>(null);
   const [editingNoteTaskId, setEditingNoteTaskId] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState('');
-  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
-  const [replyingId, setReplyingId] = useState<string | null>(null);
-  const [expandedHelpTasks, setExpandedHelpTasks] = useState<Record<string, boolean>>({});
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatTaskFilter, setChatTaskFilter] = useState<string | null>(null);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const { getMeetingsForTask } = useMeetings();
 
   useEffect(() => {
@@ -46,7 +47,6 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
   const allTasksCompleted = totalTasks > 0 && completedTasks === totalTasks;
   const criticalTasks = tasks.filter(t => t.priority === 'critical' && t.status !== 'completed').length;
   const insightCount = tasks.reduce((sum, t) => sum + (t.insights?.length || 0), 0);
-  const pendingRequests = employeeRequests.filter(r => r.status === 'pending').length;
 
   const handleTaskClick = (task: HandoverTask) => { setSelectedTask(task); setIsInsightModalOpen(true); };
   const handleRecordVideoClick = (task: HandoverTask) => { setSelectedTask(task); setIsZoomModalOpen(true); };
@@ -67,7 +67,6 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         updatedInsights = [...existingInsights, newInsight];
       }
       await updateTask(taskId, { status: 'completed', insights: updatedInsights, notes: `${topic}: ${insights}` });
-      if (file) console.log('File would be uploaded:', file.name);
       setIsInsightModalOpen(false); setSelectedTask(null); setEditingInsight(null);
     } catch (error) { console.error('Error saving insights:', error); }
   };
@@ -187,22 +186,6 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Pending Successor Questions */}
-      {pendingRequests > 0 && (
-        <Card className="border-warning/20 bg-warning/5 enterprise-shadow">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-warning/15 flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="h-5 w-5 text-warning" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">{pendingRequests} pending question{pendingRequests > 1 ? 's' : ''} from successor</p>
-              <p className="text-xs text-muted-foreground">Respond to help your successor understand your knowledge</p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
-      )}
-
       {/* Task Checklist */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -220,7 +203,7 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         <div className="space-y-3">
           {tasks.map(task => {
             const taskRequests = employeeRequests.filter(r => r.task_id === task.id);
-            const isExpanded = expandedHelpTasks[task.id] || false;
+            const pendingQCount = taskRequests.filter(r => r.status === 'pending').length;
             const taskMeetings = getMeetingsForTask(task.id).filter(m => m.ai_summary);
 
             return (
@@ -230,36 +213,50 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                 task.priority === 'high' ? 'border-l-4 border-l-warning' :
                 'border-l-4 border-l-border'
               }`}>
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
                     {/* Toggle */}
                     <button 
                       onClick={() => handleTaskToggle(task.id)} 
                       className="mt-0.5 flex-shrink-0 transition-all hover:scale-110 active:scale-95"
                     >
-                      <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                         task.status === 'completed' 
                           ? 'bg-success border-success' 
-                          : 'border-muted-foreground/30 hover:border-primary group-hover:border-primary/50'
+                          : 'border-muted-foreground/30 hover:border-primary'
                       }`}>
-                        {task.status === 'completed' && <CheckCircle className="h-4 w-4 text-success-foreground" />}
+                        {task.status === 'completed' && <CheckCircle className="h-3.5 w-3.5 text-success-foreground" />}
                       </div>
                     </button>
                     
-                    <div className="flex-1 min-w-0 space-y-3">
-                      {/* Header */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <h4 className={`text-sm font-semibold leading-snug ${
-                            task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'
-                          }`}>
-                            {task.title}
-                          </h4>
-                          {task.description && (
-                            <p className="text-xs text-muted-foreground leading-relaxed">{task.description}</p>
-                          )}
-                        </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      {/* Header row — compact */}
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className={`text-sm font-semibold leading-snug ${
+                          task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'
+                        }`}>
+                          {task.title}
+                        </h4>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {/* Question tag on card */}
+                          {pendingQCount > 0 && (
+                            <Badge 
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 border-warning/40 text-warning bg-warning/5 cursor-pointer hover:bg-warning/10"
+                              onClick={() => { setChatTaskFilter(task.id); setChatOpen(true); }}
+                            >
+                              <MessageCircle className="h-2.5 w-2.5 mr-0.5" />{pendingQCount}
+                            </Badge>
+                          )}
+                          {taskRequests.length > 0 && pendingQCount === 0 && (
+                            <Badge 
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 border-success/40 text-success bg-success/5 cursor-pointer hover:bg-success/10"
+                              onClick={() => { setChatTaskFilter(task.id); setChatOpen(true); }}
+                            >
+                              <MessageCircle className="h-2.5 w-2.5 mr-0.5" />{taskRequests.length}
+                            </Badge>
+                          )}
                           <Badge variant="outline" className={`text-[10px] px-2 py-0.5 font-medium ${
                             task.priority === 'critical' ? 'border-critical/40 text-critical bg-critical/5' :
                             task.priority === 'high' ? 'border-warning/40 text-warning bg-warning/5' :
@@ -271,9 +268,9 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                         </div>
                       </div>
                       
-                      {/* Meta row */}
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                        <span className="px-2 py-0.5 bg-muted/50 rounded-md font-medium">{task.category}</span>
+                      {/* Meta row — compact */}
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="px-1.5 py-0.5 bg-muted/50 rounded font-medium">{task.category}</span>
                         {task.dueDate && (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -282,29 +279,30 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                         )}
                       </div>
                       
-                      {/* Insights */}
+                      {/* Individual Insight Cards with timestamps */}
                       {task.insights && task.insights.length > 0 && (
-                        <div className="space-y-2 bg-primary/3 border border-primary/10 rounded-xl p-4">
-                          <div className="flex items-center gap-2">
-                            <Lightbulb className="h-3.5 w-3.5 text-primary" />
-                            <span className="text-xs font-semibold text-foreground">Insights ({task.insights.length})</span>
-                          </div>
+                        <div className="grid grid-cols-1 gap-2">
                           {task.insights.map((insight) => (
-                            <div key={insight.id} className="bg-card border rounded-lg p-3">
+                            <div key={insight.id} className="bg-primary/3 border border-primary/10 rounded-lg p-3 group/insight">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <Lightbulb className="h-3 w-3 text-primary flex-shrink-0" />
                                     <span className="text-xs font-semibold text-primary">{insight.topic}</span>
-                                    <span className="text-[10px] text-muted-foreground">{new Date(insight.createdAt).toLocaleDateString()}</span>
                                   </div>
-                                  <ExpandableText text={insight.content} maxLines={3} className="text-xs text-muted-foreground" />
-                                  {insight.attachments?.length > 0 && (
-                                    <p className="mt-1.5 text-[10px] text-muted-foreground flex items-center gap-1">
-                                      <FileText className="h-3 w-3" /> {insight.attachments.join(', ')}
-                                    </p>
-                                  )}
+                                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{insight.content}</p>
+                                  <div className="flex items-center gap-2 mt-1.5">
+                                    <span className="text-[10px] text-muted-foreground/70">
+                                      {new Date(insight.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {insight.attachments?.length > 0 && (
+                                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                                        <FileText className="h-2.5 w-2.5" /> {insight.attachments.length}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleEditInsight(task, insight)}>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover/insight:opacity-100" onClick={() => handleEditInsight(task, insight)}>
                                   <Edit2 className="h-3 w-3" />
                                 </Button>
                               </div>
@@ -313,127 +311,62 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Notes fallback */}
+                      {/* Notes fallback — as card */}
                       {task.notes && (!task.insights || task.insights.length === 0) && (
-                        <div className="bg-muted/30 border rounded-xl p-4">
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <div className="bg-muted/30 border rounded-lg p-3">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-xs font-semibold text-foreground flex items-center gap-1">
                               <FileText className="h-3 w-3 text-muted-foreground" /> Notes
                             </span>
-                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => { setEditingNoteTaskId(task.id); setEditNoteContent(task.notes || ''); }}>
-                              <Edit2 className="h-3 w-3" />
+                            <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px]" onClick={() => { setEditingNoteTaskId(task.id); setEditNoteContent(task.notes || ''); }}>
+                              <Edit2 className="h-2.5 w-2.5" />
                             </Button>
                           </div>
                           {editingNoteTaskId === task.id ? (
                             <div className="space-y-2">
-                              <Textarea value={editNoteContent} onChange={(e) => setEditNoteContent(e.target.value)} className="min-h-[80px] text-xs" />
+                              <Textarea value={editNoteContent} onChange={(e) => setEditNoteContent(e.target.value)} className="min-h-[60px] text-xs" />
                               <div className="flex gap-2">
-                                <Button size="sm" className="h-7 text-xs px-3" onClick={async () => { await updateTask(task.id, { notes: editNoteContent }); setEditingNoteTaskId(null); }}>
-                                  <Save className="h-3 w-3 mr-1" /> Save
+                                <Button size="sm" className="h-6 text-[10px] px-2" onClick={async () => { await updateTask(task.id, { notes: editNoteContent }); setEditingNoteTaskId(null); }}>
+                                  <Save className="h-2.5 w-2.5 mr-1" /> Save
                                 </Button>
-                                <Button variant="outline" size="sm" className="h-7 text-xs px-3" onClick={() => setEditingNoteTaskId(null)}>
-                                  Cancel
-                                </Button>
+                                <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={() => setEditingNoteTaskId(null)}>Cancel</Button>
                               </div>
                             </div>
                           ) : (
-                            <ExpandableText text={task.notes} maxLines={3} className="text-xs text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground line-clamp-2">{task.notes}</p>
                           )}
                         </div>
                       )}
 
-                      {/* Help Requests */}
-                      {(() => {
-                        if (taskRequests.length === 0) return null;
-                        return (
-                          <div className="rounded-xl border bg-muted/20 p-3">
-                            <button className="flex items-center gap-2 w-full text-left" onClick={() => setExpandedHelpTasks(prev => ({ ...prev, [task.id]: !prev[task.id] }))}>
-                              <MessageCircle className="h-3.5 w-3.5 text-primary" />
-                              <span className="text-xs font-semibold text-foreground">Successor Questions ({taskRequests.length})</span>
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto">
-                                {taskRequests.filter(r => r.status === 'pending').length} pending
-                              </Badge>
-                            </button>
-                            {isExpanded && (
-                              <div className="mt-3 space-y-2">
-                                {taskRequests.map(req => (
-                                  <div key={req.id} className="text-xs bg-card rounded-lg p-3 border space-y-2">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-foreground font-medium">{req.message}</p>
-                                      <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
-                                        {new Date(req.created_at).toLocaleDateString()}
-                                      </span>
-                                    </div>
-                                    {req.response && (
-                                      <div className="bg-success/5 border border-success/15 rounded-lg p-2">
-                                        <p className="text-success text-xs">↳ {req.response}</p>
-                                      </div>
-                                    )}
-                                    {req.status === 'pending' && (
-                                      <div className="flex gap-2 pt-1">
-                                        <Input
-                                          placeholder="Type your reply..."
-                                          className="h-8 text-xs flex-1"
-                                          value={replyInputs[req.id] || ''}
-                                          onChange={(e) => setReplyInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
-                                        />
-                                        <Button size="sm" className="h-8 px-3 text-xs"
-                                          disabled={!replyInputs[req.id]?.trim() || replyingId === req.id}
-                                          onClick={async () => {
-                                            setReplyingId(req.id);
-                                            await respondToRequest(req.id, replyInputs[req.id]);
-                                            setReplyInputs(prev => { const n = { ...prev }; delete n[req.id]; return n; });
-                                            setReplyingId(null);
-                                          }}>
-                                          {replyingId === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
+                      {/* Meeting summaries — compact */}
+                      {taskMeetings.length > 0 && (
+                        <div className="space-y-1.5">
+                          {taskMeetings.map(meeting => (
+                            <div key={meeting.id} className="rounded-lg border border-primary/15 bg-primary/3 p-2.5 flex items-start gap-2">
+                              <Sparkles className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[11px] font-semibold text-foreground">{meeting.title}</span>
+                                <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{meeting.ai_summary}</p>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Meeting Summaries */}
-                      {(() => {
-                        if (taskMeetings.length === 0) return null;
-                        return (
-                          <div className="space-y-2">
-                            {taskMeetings.map(meeting => (
-                              <div key={meeting.id} className="rounded-xl border border-primary/15 bg-primary/3 p-4 space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                  <span className="text-xs font-semibold text-foreground">{meeting.title}</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground">{meeting.ai_summary}</p>
-                                {meeting.ai_action_items?.length > 0 && (
-                                  <div className="space-y-1">
-                                    <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Action Items</span>
-                                    {meeting.ai_action_items.map((item: any, idx: number) => (
-                                      <div key={idx} className="text-xs flex items-center gap-2">
-                                        <Badge variant="outline" className="text-[9px] px-1.5 py-0">{item.priority}</Badge>
-                                        <span className="text-muted-foreground">{item.title}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       
-                      {/* Actions */}
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <Button variant="outline" size="sm" className="h-8 text-xs px-3 gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30" onClick={() => handleTaskClick(task)}>
-                          <Plus className="h-3.5 w-3.5" /> Add Insights
+                      {/* Actions — compact */}
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        <Button variant="outline" size="sm" className="h-7 text-[11px] px-2.5 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30" onClick={() => handleTaskClick(task)}>
+                          <Plus className="h-3 w-3" /> Add Insights
                         </Button>
-                        <Button variant="outline" size="sm" className="h-8 text-xs px-3 gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30" onClick={() => handleRecordVideoClick(task)}>
-                          <Video className="h-3.5 w-3.5" /> Meetings
+                        <Button variant="outline" size="sm" className="h-7 text-[11px] px-2.5 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30" onClick={() => handleRecordVideoClick(task)}>
+                          <Video className="h-3 w-3" /> Meetings
                         </Button>
+                        {taskRequests.length > 0 && (
+                          <Button variant="outline" size="sm" className="h-7 text-[11px] px-2.5 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                            onClick={() => { setChatTaskFilter(task.id); setChatOpen(true); }}>
+                            <MessageCircle className="h-3 w-3" /> Chat
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -459,6 +392,31 @@ export const StepBasedExitingEmployeeDashboard: React.FC = () => {
         allTasks={tasks}
         handoverId={handoverId || undefined}
       />
+
+      {/* WhatsApp-style Chat */}
+      <WhatsAppChat
+        isOpen={chatOpen}
+        onClose={() => { setChatOpen(false); setChatTaskFilter(null); }}
+        requests={chatTaskFilter 
+          ? employeeRequests.filter(r => r.task_id === chatTaskFilter)
+          : employeeRequests.filter(r => r.request_type === 'employee')
+        }
+        onSendMessage={async () => {}}
+        onRespond={respondToRequest}
+        title="Successor Questions"
+        subtitle="Respond to help your successor"
+        currentUserRole="employee"
+      />
+
+      {/* AI Chatbot */}
+      <AIChatBot
+        isOpen={aiChatOpen}
+        onClose={() => setAiChatOpen(false)}
+        tasks={tasks}
+        userRole="employee"
+        contextInfo={{ handoverProgress: progressPercentage }}
+      />
+      <AIFloatingButton onClick={() => setAiChatOpen(true)} />
     </div>
   );
 };
