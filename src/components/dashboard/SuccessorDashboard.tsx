@@ -7,7 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   AlertTriangle, MessageCircle, HelpCircle, Clock, CheckCircle,
-  FileText, User, Loader2, CheckCheck, Sparkles
+  FileText, User, Loader2, CheckCheck, Sparkles, TrendingUp,
+  BarChart3, Shield, ArrowRight, Lightbulb, Target
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
 import { ExpandableText } from '@/components/ui/expandable-text';
@@ -92,25 +93,40 @@ export const SuccessorDashboard: React.FC = () => {
   const allAcknowledged = completedTasks.length > 0 && completedTasks.every(t => t.successorAcknowledged);
   const allTasksDone = totalTasks > 0 && completedTasks.length === totalTasks;
   const readyForApproval = allTasksDone && allAcknowledged;
-
+  const acknowledgedCount = completedTasks.filter(t => t.successorAcknowledged).length;
   const criticalGaps = pendingTasks.filter(task => task.priority === 'critical').slice(0, 3).map(task => task.title);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <span className="ml-2 text-sm text-muted-foreground">Loading handover data...</span>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground">Loading handover</p>
+            <p className="text-xs text-muted-foreground mt-1">Fetching knowledge transfer data...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center space-y-3">
-          <p className="text-sm text-critical">Error loading handover data</p>
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry</Button>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-sm w-full enterprise-shadow-md">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-critical/10 flex items-center justify-center mx-auto">
+              <AlertTriangle className="h-6 w-6 text-critical" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Connection Error</p>
+              <p className="text-xs text-muted-foreground mt-1">Unable to load handover data</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry Connection</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -121,66 +137,73 @@ export const SuccessorDashboard: React.FC = () => {
     const taskMeetings = getMeetingsForTask(task.id).filter(m => m.ai_summary);
 
     return (
-      <Card className={`enterprise-shadow transition-all hover:enterprise-shadow-md ${
-        variant === 'completed' ? 'border-success/15' : 'border-warning/15'
+      <Card className={`enterprise-shadow transition-all hover:enterprise-shadow-md group ${
+        variant === 'completed' 
+          ? 'border-l-4 border-l-success' 
+          : task.priority === 'critical' ? 'border-l-4 border-l-critical' :
+            task.priority === 'high' ? 'border-l-4 border-l-warning' :
+            'border-l-4 border-l-border'
       }`}>
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="p-5 space-y-4">
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <h4 className={`text-sm font-medium ${variant === 'completed' ? 'text-foreground' : 'text-foreground'}`}>
-                {task.title}
-              </h4>
-              <p className="text-xs text-muted-foreground mt-0.5">{task.category}</p>
+            <div className="flex-1 min-w-0 space-y-1">
+              <h4 className="text-sm font-semibold text-foreground leading-snug">{task.title}</h4>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <span className="px-2 py-0.5 bg-muted/50 rounded-md font-medium">{task.category}</span>
+                {task.dueDate && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(task.dueDate).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {task.successorAcknowledged && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/5">
-                  <CheckCheck className="w-2.5 h-2.5 mr-0.5" /> Acknowledged
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-primary/30 text-primary bg-primary/5 font-medium">
+                  <CheckCheck className="w-3 h-3 mr-1" /> Acknowledged
                 </Badge>
               )}
-              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
-                variant === 'completed' ? 'border-success/30 text-success bg-success/5' : 'border-warning/30 text-warning bg-warning/5'
+              <Badge variant="outline" className={`text-[10px] px-2 py-0.5 font-medium ${
+                variant === 'completed' ? 'border-success/40 text-success bg-success/5' : 
+                task.priority === 'critical' ? 'border-critical/40 text-critical bg-critical/5' :
+                task.priority === 'high' ? 'border-warning/40 text-warning bg-warning/5' :
+                'border-primary/40 text-primary bg-primary/5'
               }`}>
                 {variant === 'completed' ? 'Done' : task.priority}
               </Badge>
             </div>
           </div>
 
-          {task.description && <p className="text-xs text-muted-foreground">{task.description}</p>}
+          {task.description && <p className="text-xs text-muted-foreground leading-relaxed">{task.description}</p>}
 
           {/* Help Requests */}
           {taskReqs.length > 0 && (
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
+            <div className="rounded-xl border bg-muted/20 p-3">
               <button
                 className="flex items-center gap-2 w-full text-left"
                 onClick={() => setExpandedHelpTasks(prev => ({ ...prev, [`${variant[0]}-${task.id}`]: !isExpanded }))}
               >
-                <MessageCircle className="h-3 w-3 text-primary" />
-                <span className="text-[11px] font-medium text-foreground">Help Requests ({taskReqs.length})</span>
-                <span className="text-[10px] text-muted-foreground ml-auto">{isExpanded ? '▲' : '▼'}</span>
+                <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-semibold text-foreground">Your Questions ({taskReqs.length})</span>
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto">
+                  {taskReqs.filter(r => r.response).length}/{taskReqs.length} answered
+                </Badge>
               </button>
               {isExpanded && (
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-3 space-y-2">
                   {taskReqs.map(req => (
-                    <div key={req.id} className="text-xs space-y-0.5 bg-card rounded p-2 border border-border/40">
-                      <div className="flex items-center justify-between">
-                        <p className="text-foreground">{req.message}</p>
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
-                          {new Date(req.created_at).toLocaleDateString()} {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
+                    <div key={req.id} className="text-xs space-y-1.5 bg-card rounded-lg p-3 border">
+                      <p className="text-foreground font-medium">{req.message}</p>
                       {req.response && (
-                        <div className="flex items-center justify-between pt-0.5">
-                          <p className="text-success">↳ {req.response}</p>
-                          {req.responded_at && (
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
-                              {new Date(req.responded_at).toLocaleDateString()} {new Date(req.responded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
+                        <div className="bg-success/5 border border-success/15 rounded-lg p-2">
+                          <p className="text-success text-xs">↳ {req.response}</p>
                         </div>
                       )}
-                      <Badge variant="outline" className="text-[9px] px-1 py-0">{req.status}</Badge>
+                      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
+                        req.status === 'resolved' ? 'border-success/30 text-success' : 'border-warning/30 text-warning'
+                      }`}>{req.status}</Badge>
                     </div>
                   ))}
                 </div>
@@ -190,20 +213,20 @@ export const SuccessorDashboard: React.FC = () => {
 
           {/* Meeting Summaries */}
           {taskMeetings.length > 0 && (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {taskMeetings.map(meeting => (
-                <div key={meeting.id} className="rounded-lg border border-primary/15 bg-primary/5 p-2.5 space-y-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="h-3 w-3 text-primary" />
-                    <span className="text-[11px] font-medium text-foreground">{meeting.title}</span>
+                <div key={meeting.id} className="rounded-xl border border-primary/15 bg-primary/3 p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-semibold text-foreground">{meeting.title}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">{meeting.ai_summary}</p>
                   {meeting.ai_action_items?.length > 0 && (
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] font-medium text-foreground">Action Items:</span>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Action Items</span>
                       {meeting.ai_action_items.map((item: any, idx: number) => (
-                        <div key={idx} className="text-[11px] flex items-center gap-1">
-                          <Badge variant="outline" className="text-[9px] px-1 py-0">{item.priority}</Badge>
+                        <div key={idx} className="text-xs flex items-center gap-2">
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0">{item.priority}</Badge>
                           <span className="text-muted-foreground">{item.title}</span>
                         </div>
                       ))}
@@ -215,25 +238,25 @@ export const SuccessorDashboard: React.FC = () => {
           )}
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            <Button variant="ghost" size="sm" onClick={() => setAiSummaryModal({ isOpen: true, task })} className="h-7 text-[11px] px-2 text-primary hover:text-primary hover:bg-primary/5">
-              <Sparkles className="w-3 h-3 mr-1" /> AI Insights
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={() => setAiSummaryModal({ isOpen: true, task })} className="h-8 text-xs px-3 gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30">
+              <Sparkles className="w-3.5 h-3.5" /> AI Insights
             </Button>
             {task.notes && (
-              <Button variant="ghost" size="sm" onClick={() => { setSelectedTask(task); setNotesModal(true); }} className="h-7 text-[11px] px-2">
-                <FileText className="w-3 h-3 mr-1" /> Notes
+              <Button variant="outline" size="sm" onClick={() => { setSelectedTask(task); setNotesModal(true); }} className="h-8 text-xs px-3 gap-1.5">
+                <FileText className="w-3.5 h-3.5" /> View Notes
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => setHelpRequestModal({ isOpen: true, task, type: 'employee' })} className="h-7 text-[11px] px-2 text-primary hover:text-primary hover:bg-primary/5">
-              <MessageCircle className="w-3 h-3 mr-1" /> Ask Employee
+            <Button variant="outline" size="sm" onClick={() => setHelpRequestModal({ isOpen: true, task, type: 'employee' })} className="h-8 text-xs px-3 gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30">
+              <MessageCircle className="w-3.5 h-3.5" /> Ask Employee
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setHelpRequestModal({ isOpen: true, task, type: 'manager' })} className="h-7 text-[11px] px-2 text-warning hover:text-warning hover:bg-warning/5">
-              <HelpCircle className="w-3 h-3 mr-1" /> Escalate
+            <Button variant="outline" size="sm" onClick={() => setHelpRequestModal({ isOpen: true, task, type: 'manager' })} className="h-8 text-xs px-3 gap-1.5 hover:bg-warning/5 hover:text-warning hover:border-warning/30">
+              <HelpCircle className="w-3.5 h-3.5" /> Escalate
             </Button>
             {variant === 'completed' && !task.successorAcknowledged && (
-              <Button size="sm" disabled={acknowledgingTaskId === task.id} className="h-7 text-[11px] px-2.5 ml-auto"
+              <Button size="sm" disabled={acknowledgingTaskId === task.id} className="h-8 text-xs px-4 ml-auto gap-1.5"
                 onClick={async () => { setAcknowledgingTaskId(task.id); await acknowledgeTask(task.id); setAcknowledgingTaskId(null); }}>
-                {acknowledgingTaskId === task.id ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <CheckCheck className="w-3 h-3 mr-1" />}
+                {acknowledgingTaskId === task.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCheck className="w-3.5 h-3.5" />}
                 Acknowledge KT
               </Button>
             )}
@@ -244,73 +267,101 @@ export const SuccessorDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Incoming Handover</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Knowledge transfer from {handoverInfo?.exitingEmployeeName || 'your predecessor'}</p>
+    <div className="space-y-8">
+      {/* Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/8 via-primary/4 to-transparent border border-primary/10 p-8">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              <span className="text-xs font-medium text-primary uppercase tracking-widest">Incoming Transfer</span>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Knowledge Handover</h1>
+            <p className="text-muted-foreground max-w-md">
+              Receiving knowledge from <span className="font-semibold text-foreground">{handoverInfo?.exitingEmployeeName || 'your predecessor'}</span>
+              {handoverInfo?.department && <span> · {handoverInfo.department}</span>}
+            </p>
+          </div>
+          <ExportButton title="Export Handover" variant="outline" size="sm" />
         </div>
-        <ExportButton title="Export Handover" variant="outline" size="sm" />
       </div>
 
-      {/* Progress Card */}
-      <Card className="enterprise-shadow-md">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4 text-primary" />
+      {/* Metrics Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Transfer Progress', value: `${progressPercentage}%`, icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/8' },
+          { label: 'Tasks Completed', value: `${completedTasks.length}/${totalTasks}`, icon: CheckCircle, color: 'text-success', bg: 'bg-success/8' },
+          { label: 'Acknowledged', value: `${acknowledgedCount}/${completedTasks.length}`, icon: CheckCheck, color: 'text-primary', bg: 'bg-primary/8' },
+          { label: 'Critical Gaps', value: criticalGaps.length.toString(), icon: AlertTriangle, color: criticalGaps.length > 0 ? 'text-critical' : 'text-muted-foreground', bg: criticalGaps.length > 0 ? 'bg-critical/8' : 'bg-muted/50' },
+        ].map((metric) => (
+          <Card key={metric.label} className="enterprise-shadow hover:enterprise-shadow-md transition-shadow">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`h-11 w-11 rounded-xl ${metric.bg} flex items-center justify-center flex-shrink-0`}>
+                <metric.icon className={`h-5 w-5 ${metric.color}`} />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-foreground">Transfer Progress</h3>
-                <p className="text-xs text-muted-foreground">
-                  {completedTasks.length} of {totalTasks} tasks completed
-                </p>
+                <p className="text-2xl font-bold text-foreground leading-none">{metric.value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{metric.label}</p>
               </div>
-            </div>
-            <span className="text-3xl font-semibold text-primary">{progressPercentage}%</span>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Progress Bar */}
+      <Card className="enterprise-shadow-md overflow-hidden">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-semibold text-foreground">Overall Progress</span>
+            <span className="text-sm font-bold text-primary">{progressPercentage}%</span>
           </div>
+          <p className="text-xs text-muted-foreground mb-3">{pendingTasks.length} tasks remaining · {acknowledgedCount} acknowledged</p>
           <Progress 
             value={progressPercentage} 
             variant={progressPercentage >= 80 ? 'success' : progressPercentage >= 50 ? 'warning' : 'critical'}
-            className="h-2"
+            className="h-2.5"
           />
         </CardContent>
       </Card>
 
       {/* KT Approval Request */}
       {readyForApproval && handoverInfo && (
-        <Card className={`enterprise-shadow-md ${approvalSent ? 'border-success/30 bg-success/5' : 'border-primary/30 bg-primary/5'}`}>
-          <CardContent className="p-5 text-center space-y-3">
-            <CheckCheck className="h-8 w-8 text-primary mx-auto" />
-            <div>
-              <h3 className="text-base font-semibold text-foreground">
-                {approvalSent ? 'Approval Request Sent' : 'All Tasks Acknowledged!'}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                {approvalSent 
-                  ? 'Your KT approval request has been sent to the manager. You will be notified once approved.'
-                  : 'Request manager approval to officially close this handover.'}
-              </p>
+        <Card className={`enterprise-shadow-md overflow-hidden ${approvalSent ? 'border-success/30' : 'border-primary/30'}`}>
+          <CardContent className="p-0">
+            <div className={`p-6 text-center space-y-4 ${approvalSent ? 'bg-success/5' : 'bg-primary/5'}`}>
+              <div className={`h-14 w-14 rounded-2xl mx-auto flex items-center justify-center ${approvalSent ? 'bg-success/15' : 'bg-primary/15'}`}>
+                <Shield className={`h-7 w-7 ${approvalSent ? 'text-success' : 'text-primary'}`} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">
+                  {approvalSent ? 'Approval Request Submitted' : 'All Tasks Acknowledged'}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                  {approvalSent 
+                    ? 'Your KT approval request has been sent to the manager. You\'ll be notified once approved.'
+                    : 'All knowledge transfer items have been reviewed and acknowledged. Request manager approval to close.'}
+                </p>
+              </div>
+              {!approvalSent && (
+                <Button
+                  size="lg"
+                  onClick={async () => {
+                    await createRequest(
+                      tasks[0].id,
+                      handoverInfo.handoverId,
+                      'manager',
+                      `All ${totalTasks} tasks have been acknowledged by the successor. Requesting approval to close the handover for ${handoverInfo.exitingEmployeeName}.`
+                    );
+                    setApprovalSent(true);
+                  }}
+                  className="gap-2"
+                >
+                  <CheckCheck className="h-4 w-4" />
+                  Request KT Approval from Manager
+                </Button>
+              )}
             </div>
-            {!approvalSent && (
-              <Button
-                onClick={async () => {
-                  await createRequest(
-                    tasks[0].id,
-                    handoverInfo.handoverId,
-                    'manager',
-                    `All ${totalTasks} tasks have been acknowledged by the successor. Requesting approval to close the handover for ${handoverInfo.exitingEmployeeName}.`
-                  );
-                  setApprovalSent(true);
-                }}
-                className="gap-1.5"
-              >
-                <CheckCheck className="h-3.5 w-3.5" />
-                Request KT Approval from Manager
-              </Button>
-            )}
           </CardContent>
         </Card>
       )}
@@ -325,25 +376,42 @@ export const SuccessorDashboard: React.FC = () => {
 
       {/* Critical Gaps */}
       {criticalGaps.length > 0 && (
-        <Alert variant="destructive" className="border-critical/20 bg-critical-soft">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <span className="font-medium text-sm">Critical Missing Items:</span>
-            <ul className="list-disc list-inside mt-1 text-xs space-y-0.5">
-              {criticalGaps.map((gap, i) => <li key={i}>{gap}</li>)}
-            </ul>
-          </AlertDescription>
-        </Alert>
+        <Card className="border-critical/20 enterprise-shadow overflow-hidden">
+          <CardContent className="p-0">
+            <div className="bg-critical/5 p-5 flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-critical/15 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-critical" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Critical Knowledge Gaps</h3>
+                <p className="text-xs text-muted-foreground mt-1">These high-priority items require immediate attention</p>
+                <ul className="mt-3 space-y-1.5">
+                  {criticalGaps.map((gap, i) => (
+                    <li key={i} className="flex items-center gap-2 text-xs text-foreground">
+                      <div className="h-1.5 w-1.5 rounded-full bg-critical flex-shrink-0" />
+                      {gap}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Completed Tasks */}
       {completedTasks.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-success" />
-            <h3 className="text-sm font-medium text-foreground">Completed ({completedTasks.length})</h3>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-success" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Completed Tasks</h2>
+              <p className="text-xs text-muted-foreground">{completedTasks.length} items · {acknowledgedCount} acknowledged</p>
+            </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {completedTasks.map(task => <TaskCard key={task.id} task={task} variant="completed" />)}
           </div>
         </div>
@@ -351,22 +419,32 @@ export const SuccessorDashboard: React.FC = () => {
 
       {/* Pending Tasks */}
       {pendingTasks.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-warning" />
-            <h3 className="text-sm font-medium text-foreground">Pending ({pendingTasks.length})</h3>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-warning" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Awaiting Knowledge Transfer</h2>
+              <p className="text-xs text-muted-foreground">{pendingTasks.length} items pending from predecessor</p>
+            </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {pendingTasks.map(task => <TaskCard key={task.id} task={task} variant="pending" />)}
           </div>
         </div>
       )}
 
       {totalTasks === 0 && (
-        <Card className="enterprise-shadow">
-          <CardContent className="p-12 text-center">
-            <FileText className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">No handover tasks assigned yet.</p>
+        <Card className="enterprise-shadow-md">
+          <CardContent className="p-16 text-center space-y-4">
+            <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto">
+              <FileText className="h-7 w-7 text-muted-foreground/40" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">No Handover Tasks</p>
+              <p className="text-xs text-muted-foreground mt-1">No knowledge transfer tasks have been assigned yet.</p>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -397,11 +475,11 @@ export const SuccessorDashboard: React.FC = () => {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="border-b pb-4">
             <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <FileText className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <DialogTitle className="text-lg font-semibold">{selectedTask?.title}</DialogTitle>
+                <DialogTitle className="text-lg font-bold">{selectedTask?.title}</DialogTitle>
                 <DialogDescription className="mt-1.5">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-[10px]">{selectedTask?.category}</Badge>
@@ -421,22 +499,22 @@ export const SuccessorDashboard: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto py-4 space-y-5">
             {selectedTask?.description && (
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Overview</h4>
-                <div className="bg-muted/30 border rounded-lg p-3">
-                  <p className="text-sm text-foreground">{selectedTask.description}</p>
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Overview</h4>
+                <div className="bg-muted/30 border rounded-xl p-4">
+                  <p className="text-sm text-foreground leading-relaxed">{selectedTask.description}</p>
                 </div>
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">KT Notes</h4>
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">KT Notes</h4>
               {selectedTask?.notes ? (
-                <div className="bg-primary/5 border border-primary/15 rounded-lg p-4">
+                <div className="bg-primary/5 border border-primary/15 rounded-xl p-4">
                   <ExpandableText text={selectedTask.notes} maxLines={5} />
                 </div>
               ) : (
-                <div className="bg-muted/20 border border-dashed rounded-lg p-8 text-center">
+                <div className="bg-muted/20 border border-dashed rounded-xl p-8 text-center">
                   <FileText className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
                   <p className="text-xs text-muted-foreground">No notes added yet.</p>
                 </div>
@@ -444,10 +522,10 @@ export const SuccessorDashboard: React.FC = () => {
             </div>
 
             {selectedTask?.notes && (
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">What This Means For You</h4>
-                <div className="bg-success/5 border border-success/15 rounded-lg p-3">
-                  <ul className="space-y-1.5 text-xs">
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">What This Means For You</h4>
+                <div className="bg-success/5 border border-success/15 rounded-xl p-4">
+                  <ul className="space-y-2 text-xs">
                     <li className="flex items-start gap-2"><CheckCircle className="h-3.5 w-3.5 text-success mt-0.5 flex-shrink-0" /><span>Review and understand the documented knowledge thoroughly</span></li>
                     <li className="flex items-start gap-2"><CheckCircle className="h-3.5 w-3.5 text-success mt-0.5 flex-shrink-0" /><span>Note any clarifications needed before handover completes</span></li>
                     <li className="flex items-start gap-2"><CheckCircle className="h-3.5 w-3.5 text-success mt-0.5 flex-shrink-0" /><span>Acknowledge once you've fully understood the knowledge</span></li>
@@ -457,21 +535,21 @@ export const SuccessorDashboard: React.FC = () => {
             )}
 
             {selectedTask?.dueDate && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-warning/5 border border-warning/15 rounded-lg p-2.5">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-warning/5 border border-warning/15 rounded-xl p-3">
                 <Clock className="h-3.5 w-3.5 text-warning" />
                 Due: {new Date(selectedTask.dueDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </div>
             )}
           </div>
 
-          <div className="border-t pt-3 mt-auto">
+          <div className="border-t pt-4 mt-auto">
             {selectedTask?.successorAcknowledged ? (
-              <div className="flex items-center gap-2.5 bg-primary/5 border border-primary/15 rounded-lg p-3">
-                <CheckCheck className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-3 bg-primary/5 border border-primary/15 rounded-xl p-4">
+                <CheckCheck className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-xs font-medium text-foreground">Knowledge Acknowledged</p>
+                  <p className="text-sm font-semibold text-foreground">Knowledge Acknowledged</p>
                   {selectedTask.successorAcknowledgedAt && (
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Confirmed {new Date(selectedTask.successorAcknowledgedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
@@ -482,8 +560,8 @@ export const SuccessorDashboard: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Review notes and acknowledge when ready</p>
                 <Button size="sm" onClick={async () => {
                   if (selectedTask) { setAcknowledgingTaskId(selectedTask.id); await acknowledgeTask(selectedTask.id); setAcknowledgingTaskId(null); setNotesModal(false); }
-                }} disabled={acknowledgingTaskId === selectedTask?.id}>
-                  {acknowledgingTaskId === selectedTask?.id ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CheckCheck className="w-3.5 h-3.5 mr-1.5" />}
+                }} disabled={acknowledgingTaskId === selectedTask?.id} className="gap-1.5">
+                  {acknowledgingTaskId === selectedTask?.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCheck className="w-3.5 h-3.5" />}
                   Acknowledge KT
                 </Button>
               </div>
