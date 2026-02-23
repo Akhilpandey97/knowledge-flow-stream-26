@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { 
   AlertTriangle, MessageCircle, HelpCircle, Clock, CheckCircle,
   FileText, Loader2, CheckCheck, Sparkles, TrendingUp,
-  BarChart3, Shield, Lightbulb, Target
+  BarChart3, Shield, Lightbulb, Target, Video, Calendar, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
 import { ExpandableText } from '@/components/ui/expandable-text';
@@ -36,6 +36,7 @@ export const SuccessorDashboard: React.FC = () => {
   const [chatType, setChatType] = useState<'employee' | 'manager'>('employee');
   const [chatTaskFilter, setChatTaskFilter] = useState<string | null>(null);
   const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [expandedMeetingTaskId, setExpandedMeetingTaskId] = useState<string | null>(null);
   const [handoverInfo, setHandoverInfo] = useState<{
     handoverId: string;
     exitingEmployeeName: string;
@@ -212,16 +213,59 @@ export const SuccessorDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Meeting summaries — compact */}
-          {taskMeetings.length > 0 && taskMeetings.slice(0, 1).map(meeting => (
-            <div key={meeting.id} className="rounded-lg border border-primary/15 bg-primary/3 p-2.5 flex items-start gap-2">
-              <Sparkles className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="text-[11px] font-semibold text-foreground">{meeting.title}</span>
-                <p className="text-[11px] text-muted-foreground line-clamp-1">{meeting.ai_summary}</p>
-              </div>
+          {/* Expanded meeting details */}
+          {expandedMeetingTaskId === task.id && taskMeetings.length > 0 && (
+            <div className="space-y-2">
+              {taskMeetings.map(meeting => (
+                <div key={meeting.id} className="rounded-lg border border-primary/15 bg-card p-3 space-y-2.5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">{meeting.title}</p>
+                      {meeting.task_title && <p className="text-[11px] text-muted-foreground">Task: {meeting.task_title}</p>}
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
+                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(meeting.meeting_date).toLocaleDateString()}</span>
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{meeting.meeting_time} ({meeting.duration})</span>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
+                      meeting.status === 'completed' ? 'border-success/40 text-success bg-success/5' :
+                      meeting.status === 'scheduled' ? 'border-blue-300 text-blue-700 bg-blue-50' :
+                      'border-destructive/40 text-destructive bg-destructive/5'
+                    }`}>{meeting.status}</Badge>
+                  </div>
+                  {meeting.description && <p className="text-[11px] text-muted-foreground">{meeting.description}</p>}
+                  {meeting.attendees && meeting.attendees.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground"><span className="font-medium">Attendees:</span> {meeting.attendees.join(', ')}</p>
+                  )}
+                  {meeting.ai_summary && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="h-3 w-3 text-primary" />
+                        <span className="text-[11px] font-semibold">AI Meeting Summary</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">{meeting.ai_summary}</p>
+                    </div>
+                  )}
+                  {meeting.ai_action_items && meeting.ai_action_items.length > 0 && (
+                    <div className="bg-warning/5 border border-warning/20 rounded-lg p-2.5 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle className="h-3 w-3 text-warning" />
+                        <span className="text-[11px] font-semibold text-warning">AI Action Items</span>
+                      </div>
+                      <ul className="space-y-0.5">
+                        {meeting.ai_action_items.map((item: any, idx: number) => (
+                          <li key={idx} className="text-[11px] flex items-start gap-1.5">
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 mt-0.5 shrink-0">{item.priority || 'medium'}</Badge>
+                            <span className="text-muted-foreground">{item.title}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
 
           {/* Actions — compact */}
           <div className="flex flex-wrap gap-1.5 pt-1">
@@ -231,6 +275,12 @@ export const SuccessorDashboard: React.FC = () => {
             {task.notes && (
               <Button variant="outline" size="sm" onClick={() => { setSelectedTask(task); setNotesModal(true); }} className="h-7 text-[11px] px-2.5 gap-1">
                 <FileText className="w-3 h-3" /> View Notes
+              </Button>
+            )}
+            {taskMeetings.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setExpandedMeetingTaskId(expandedMeetingTaskId === task.id ? null : task.id)} className="h-7 text-[11px] px-2.5 gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300">
+                <Video className="w-3 h-3" /> Meetings ({taskMeetings.length})
+                {expandedMeetingTaskId === task.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => openChat('employee', task.id)} className="h-7 text-[11px] px-2.5 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30">
