@@ -41,6 +41,7 @@ export const SuccessorDashboard: React.FC = () => {
     handoverId: string;
     exitingEmployeeName: string;
     department: string;
+    isClosed: boolean;
   } | null>(null);
   const [approvalSent, setApprovalSent] = useState(false);
 
@@ -51,7 +52,7 @@ export const SuccessorDashboard: React.FC = () => {
       try {
         const { data: handovers, error: handoverError } = await supabase
           .from('handovers')
-          .select(`id, employee_id, users!handovers_employee_id_fkey (email, department)`)
+          .select(`id, employee_id, status, users!handovers_employee_id_fkey (email, department)`)
           .eq('successor_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1);
@@ -63,7 +64,8 @@ export const SuccessorDashboard: React.FC = () => {
           setHandoverInfo({
             handoverId: handover.id,
             exitingEmployeeName: employeeData?.email?.split('@')[0] || 'Predecessor',
-            department: employeeData?.department || 'General'
+            department: employeeData?.department || 'General',
+            isClosed: (handover as any).status === 'closed'
           });
         }
       } catch (err) { console.error('Error fetching handover info:', err); }
@@ -310,8 +312,15 @@ export const SuccessorDashboard: React.FC = () => {
         <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-1">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-medium text-primary uppercase tracking-widest">Incoming Transfer</span>
+              <div className={`h-2 w-2 rounded-full ${handoverInfo?.isClosed ? 'bg-success' : 'bg-primary'} animate-pulse`} />
+              <span className={`text-xs font-medium ${handoverInfo?.isClosed ? 'text-success' : 'text-primary'} uppercase tracking-widest`}>
+                {handoverInfo?.isClosed ? 'Transfer Complete' : 'Incoming Transfer'}
+              </span>
+              {handoverInfo?.isClosed && (
+                <Badge className="text-[10px] px-2 py-0 h-5 bg-success/15 text-success border-success/30 border ml-1">
+                  <CheckCheck className="h-3 w-3 mr-0.5" /> KT Closed
+                </Badge>
+              )}
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Knowledge Handover</h1>
             <p className="text-muted-foreground max-w-md">

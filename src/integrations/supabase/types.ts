@@ -231,6 +231,7 @@ export type Database = {
           employee_id: string | null
           id: string
           progress: number | null
+          status: string | null
           successor_id: string | null
         }
         Insert: {
@@ -238,6 +239,7 @@ export type Database = {
           employee_id?: string | null
           id?: string
           progress?: number | null
+          status?: string | null
           successor_id?: string | null
         }
         Update: {
@@ -245,6 +247,7 @@ export type Database = {
           employee_id?: string | null
           id?: string
           progress?: number | null
+          status?: string | null
           successor_id?: string | null
         }
         Relationships: [

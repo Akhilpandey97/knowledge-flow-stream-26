@@ -74,17 +74,26 @@ export const useHandoverStats = (department?: string) => {
       const successorsAssigned = filteredHandovers.filter(h => h.successor_id).length;
       
       // Calculate completion status based on progress
-      const completedHandovers = filteredHandovers.filter(h => h.progress >= 90).length;
-      const inProgressHandovers = filteredHandovers.filter(h => h.progress < 90 && h.progress > 0).length;
+      // Recalculate progress from tasks (DB progress field may be stale)
+      const recalculated = filteredHandovers.map(h => {
+        const tasks = (h as any).tasks || [];
+        const taskCount = tasks.length;
+        const doneTasks = tasks.filter((t: any) => t.status === 'completed' || t.status === 'done').length;
+        const calcProgress = taskCount > 0 ? Math.round((doneTasks / taskCount) * 100) : (h.progress || 0);
+        return { ...h, _progress: calcProgress };
+      });
+
+      const completedHandovers = recalculated.filter(h => h._progress >= 90).length;
+      const inProgressHandovers = recalculated.filter(h => h._progress < 90 && h._progress > 0).length;
       
       // Calculate overall progress
-      const overallProgress = filteredHandovers.length > 0 
-        ? Math.round(filteredHandovers.reduce((sum, h) => sum + (h.progress || 0), 0) / filteredHandovers.length)
+      const overallProgress = recalculated.length > 0 
+        ? Math.round(recalculated.reduce((sum, h) => sum + h._progress, 0) / recalculated.length)
         : 0;
 
       // Calculate high risk based on low progress and missing successors
-      const highRiskCount = filteredHandovers.filter(h => 
-        h.progress < 50 || !h.successor_id
+      const highRiskCount = recalculated.filter(h => 
+        h._progress < 50 || !h.successor_id
       ).length;
 
       // Department distribution

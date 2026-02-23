@@ -207,8 +207,12 @@ export const HRManagerDashboard: React.FC = () => {
     } finally { setActionLoading(false); }
   };
 
-  const handleApproveKT = async (requestId: string) => {
+  const handleApproveKT = async (requestId: string, handoverId?: string) => {
     await respondToRequest(requestId, 'KT has been approved. The handover is now officially closed. Great work!');
+    // Mark handover as closed
+    if (handoverId) {
+      await supabase.from('handovers').update({ status: 'closed', progress: 100 }).eq('id', handoverId);
+    }
     toast({ title: "KT Approved", description: "The handover has been officially closed." });
   };
 
@@ -434,18 +438,29 @@ export const HRManagerDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                {pendingKTApprovals.map(req => (
-                  <div key={req.id} className="flex items-center justify-between gap-4 bg-card rounded-xl p-4 border enterprise-shadow">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{req.task?.title || 'Handover Completion'}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{req.message}</p>
+                {pendingKTApprovals.map(req => {
+                  // Find the handover to show employee→successor names
+                  const matchedHandover = handovers.find(h => h.id === req.handover_id);
+                  const displayName = matchedHandover 
+                    ? `${matchedHandover.exitingEmployee} → ${matchedHandover.successor}` 
+                    : 'Handover Completion';
+                  const dept = matchedHandover?.department;
+                  return (
+                    <div key={req.id} className="flex items-center justify-between gap-4 bg-card rounded-xl p-4 border enterprise-shadow">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground">{displayName}</p>
+                          {dept && <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">{dept}</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{req.message}</p>
+                      </div>
+                      <Button size="sm" className="flex-shrink-0 bg-success hover:bg-success/90 text-success-foreground h-9 px-4 gap-1.5"
+                        onClick={() => handleApproveKT(req.id, req.handover_id)}>
+                        <CheckCheck className="h-4 w-4" /> Approve & Close
+                      </Button>
                     </div>
-                    <Button size="sm" className="flex-shrink-0 bg-success hover:bg-success/90 text-success-foreground h-9 px-4 gap-1.5"
-                      onClick={() => handleApproveKT(req.id)}>
-                      <CheckCheck className="h-4 w-4" /> Approve & Close
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </CardContent>
@@ -603,6 +618,12 @@ export const HRManagerDashboard: React.FC = () => {
                           <span className="font-semibold text-sm text-foreground">{h.exitingEmployee}</span>
                           <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                           <span className="text-sm text-muted-foreground">{h.successor || 'Unassigned'}</span>
+                          {/* Closed badge */}
+                          {h.status === 'completed' && (
+                            <Badge className="text-[9px] px-1.5 py-0 h-4 bg-success/15 text-success border-success/30 border">
+                              <CheckCheck className="h-2.5 w-2.5 mr-0.5" /> KT Closed
+                            </Badge>
+                          )}
                           {/* Inline escalation badge */}
                           {esc && esc.pending > 0 && (
                             <Badge variant="destructive" className="text-[9px] px-1.5 py-0 h-4 animate-pulse">

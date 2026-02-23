@@ -73,15 +73,19 @@ export const useHandoversList = (department?: string) => {
       const processedHandovers: HandoverWithDetails[] = filteredData.map(handover => {
         const tasks = handover.tasks || [];
         const taskCount = tasks.length;
-        const completedTasks = tasks.filter((task: any) => task.status === 'completed').length;
+        const completedTasks = tasks.filter((task: any) => task.status === 'completed' || task.status === 'done').length;
         
         // Calculate progress based on tasks if not set
         const calculatedProgress = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : 0;
-        const progress = handover.progress || calculatedProgress;
+        const progress = taskCount > 0 ? calculatedProgress : (handover.progress || 0);
+        
+        // Check if handover is closed
+        const isClosed = (handover as any).status === 'closed';
         
         // Determine status based on progress
         let status: HandoverWithDetails['status'] = 'pending';
-        if (progress >= 90) status = 'review';
+        if (isClosed) status = 'completed';
+        else if (progress >= 90) status = 'review';
         else if (progress > 0) status = 'in-progress';
         
         // Calculate risk level
