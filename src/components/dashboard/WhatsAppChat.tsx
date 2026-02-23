@@ -221,7 +221,7 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
         </div>
 
         {/* Input area */}
-        {currentUserRole === 'successor' && (
+        {(
           <div className="border-t bg-card p-3 flex items-end gap-2 flex-shrink-0">
             <Textarea
               value={message}
