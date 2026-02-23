@@ -220,27 +220,31 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input area */}
-        {(
-          <div className="border-t bg-card p-3 flex items-end gap-2 flex-shrink-0">
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Type a message..."
-              className="min-h-[44px] max-h-[120px] text-sm flex-1 resize-none"
-              rows={1}
-            />
-            <Button
-              onClick={handleSend}
-              disabled={!message.trim() || sending}
-              size="sm"
-              className="h-10 w-10 p-0 rounded-full flex-shrink-0"
-            >
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-          </div>
-        )}
+        {/* Input area — always visible for all roles */}
+        <div className="border-t bg-card p-3 flex items-end gap-2 flex-shrink-0">
+          {respondingId && (
+            <div className="absolute bottom-[68px] left-3 right-3 bg-muted/80 rounded-lg px-3 py-1.5 flex items-center justify-between text-xs text-muted-foreground">
+              <span>Replying to message…</span>
+              <button onClick={() => { setRespondingId(null); setReplyText(''); }} className="hover:text-foreground"><X className="h-3 w-3" /></button>
+            </div>
+          )}
+          <Textarea
+            value={respondingId ? replyText : message}
+            onChange={(e) => respondingId ? setReplyText(e.target.value) : setMessage(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder={respondingId ? "Type your reply..." : "Type a message..."}
+            className="min-h-[44px] max-h-[120px] text-sm flex-1 resize-none"
+            rows={1}
+          />
+          <Button
+            onClick={() => respondingId ? handleReply(respondingId) : handleSend()}
+            disabled={respondingId ? !replyText.trim() || sending : !message.trim() || sending}
+            size="sm"
+            className="h-10 w-10 p-0 rounded-full flex-shrink-0"
+          >
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
