@@ -66,11 +66,14 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     setSending(true);
     setMessage('');
     try {
-      // For employee/manager, respond to the latest pending request if exists
+      // For employee/manager, respond to the oldest pending request
       if (currentUserRole !== 'successor') {
-        const pendingReq = requests.find(r => r.status === 'pending');
-        if (pendingReq) {
-          await onRespond(pendingReq.id, text);
+        const pendingRequests = [...requests].filter(r => r.status === 'pending');
+        // Sort ascending by created_at to get oldest first
+        pendingRequests.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        const oldestPending = pendingRequests[0];
+        if (oldestPending) {
+          await onRespond(oldestPending.id, text);
         } else {
           await onSendMessage(text);
         }
