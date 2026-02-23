@@ -6,6 +6,13 @@ export interface TaskInsight {
   attachments?: string[];
 }
 
+export interface TaskNote {
+  id: string;
+  content: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
 export interface HandoverTask {
   id: string;
   title: string;
@@ -15,6 +22,7 @@ export interface HandoverTask {
   priority: 'low' | 'medium' | 'high' | 'critical';
   dueDate?: string;
   notes?: string;
+  notesList?: TaskNote[];
   insights?: TaskInsight[];
   attachments?: string[];
   videoLinks?: string[];

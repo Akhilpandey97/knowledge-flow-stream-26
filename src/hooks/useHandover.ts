@@ -205,24 +205,30 @@ export const useHandover = () => {
           const taskIds = mappedTasks.map(task => task.id);
           const { data: notes } = await supabase
             .from('notes')
-            .select('task_id, content, created_at')
+            .select('id, task_id, content, created_at, created_by')
             .in('task_id', taskIds)
             .order('created_at', { ascending: true });
           
-          // Aggregate notes by task
+          // Aggregate notes by task — keep individual notes with timestamps
           if (notes) {
-            const notesByTask: Record<string, string[]> = {};
+            const notesListByTask: Record<string, { id: string; content: string; createdAt: string; createdBy?: string }[]> = {};
             notes.forEach(note => {
-              if (!notesByTask[note.task_id]) {
-                notesByTask[note.task_id] = [];
+              if (!notesListByTask[note.task_id]) {
+                notesListByTask[note.task_id] = [];
               }
-              notesByTask[note.task_id].push(note.content);
+              notesListByTask[note.task_id].push({
+                id: note.id,
+                content: note.content || '',
+                createdAt: note.created_at || '',
+                createdBy: note.created_by || undefined,
+              });
             });
             
             // Add notes to tasks
             mappedTasks = mappedTasks.map(task => ({
               ...task,
-              notes: notesByTask[task.id]?.join('\n\n') || ''
+              notes: (notesListByTask[task.id] || []).map(n => n.content).join('\n\n'),
+              notesList: notesListByTask[task.id] || [],
             }));
           }
         }
@@ -264,9 +270,12 @@ export const useHandover = () => {
             created_by: user.id
           });
         if (error) throw error;
+        // Refetch to get all notes with proper timestamps
+        await fetchHandoverData();
+        return;
       }
 
-      // Update local state
+      // Update local state for non-notes updates
       setTasks(prev => prev.map(task => 
         task.id === taskId ? { ...task, ...updates } : task
       ));
