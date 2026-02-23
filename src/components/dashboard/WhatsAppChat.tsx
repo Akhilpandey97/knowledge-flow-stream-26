@@ -98,29 +98,32 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     inputRef.current?.focus();
   };
 
+  // Sort requests chronologically (oldest first) for chat display
+  const sortedRequests = [...requests].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
   // Flatten requests into a linear message stream
   const chatMessages: ChatMessage[] = [];
-  requests.forEach(req => {
-    // The original question — always sent by the successor
+  sortedRequests.forEach(req => {
     chatMessages.push({
       id: req.id + '-q',
       text: req.message,
       time: format(new Date(req.created_at), 'HH:mm'),
       date: format(new Date(req.created_at), 'MMM d, yyyy'),
-      outgoing: currentUserRole === 'successor', // successor sent the question
+      outgoing: currentUserRole === 'successor',
       senderLabel: currentUserRole !== 'successor' ? 'Successor' : undefined,
       taskRef: req.task?.title || undefined,
       status: req.status as any,
     });
 
-    // The response, if any
     if (req.response) {
       chatMessages.push({
         id: req.id + '-r',
         text: req.response,
         time: req.responded_at ? format(new Date(req.responded_at), 'HH:mm') : '',
         date: req.responded_at ? format(new Date(req.responded_at), 'MMM d, yyyy') : format(new Date(req.created_at), 'MMM d, yyyy'),
-        outgoing: currentUserRole !== 'successor', // employee/manager sent the reply
+        outgoing: currentUserRole !== 'successor',
         senderLabel: currentUserRole === 'successor' ? 'Employee' : undefined,
       });
     }
