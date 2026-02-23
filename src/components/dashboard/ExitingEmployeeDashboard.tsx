@@ -242,16 +242,34 @@ export const ExitingEmployeeDashboard: React.FC = () => {
                     {task.category}
                   </div>
 
-                  {/* Notes Display */}
-                  {task.notes && (
+                  {/* Notes Display — individual notes with timestamps */}
+                  {task.notesList && task.notesList.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-success" />
+                        <span className="text-sm font-medium text-success">Notes ({task.notesList.length})</span>
+                      </div>
+                      {task.notesList.map((note) => (
+                        <div key={note.id} className="bg-success/5 border border-success/20 rounded-lg p-3">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{note.content}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1.5">
+                            {new Date(note.createdAt).toLocaleString([], { 
+                              month: 'short', day: 'numeric', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit' 
+                            })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Legacy fallback for plain notes string */}
+                  {task.notes && (!task.notesList || task.notesList.length === 0) && (
                     <div className="bg-success/5 border border-success/20 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <FileText className="h-4 w-4 text-success" />
                         <span className="text-sm font-medium text-success">Notes</span>
                       </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {task.notes}
-                      </p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{task.notes}</p>
                     </div>
                   )}
 
@@ -264,7 +282,7 @@ export const ExitingEmployeeDashboard: React.FC = () => {
                       className="gap-2"
                     >
                       <Plus className="h-4 w-4" />
-                      {task.notes ? 'Update Notes' : 'Add Notes'}
+                      Add Note
                     </Button>
                     <Button 
                       variant="ghost"
