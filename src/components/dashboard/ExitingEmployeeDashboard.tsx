@@ -29,7 +29,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { DocumentUploadScreen } from './DocumentUploadScreen';
 
 export const ExitingEmployeeDashboard: React.FC = () => {
-  const { tasks, loading, error, updateTask } = useHandover();
+  const { tasks, loading, error, updateTask, handoverStatus } = useHandover();
   const { requests: employeeRequests, loading: requestsLoading, respondToRequest } = useHelpRequests('employee');
   const { toast } = useToast();
   const [hasUploadedInSession, setHasUploadedInSession] = useState(false);
@@ -149,7 +149,14 @@ export const ExitingEmployeeDashboard: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-8 p-6">
       {/* Clean Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Knowledge Handover</h1>
+        <div className="flex items-center justify-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">Knowledge Handover</h1>
+          {handoverStatus === 'closed' && (
+            <Badge className="text-xs px-2.5 py-0.5 bg-success/15 text-success border-success/30 border">
+              <CheckCircle className="h-3.5 w-3.5 mr-1" /> KT Closed
+            </Badge>
+          )}
+        </div>
         <p className="text-muted-foreground text-lg">
           Complete your knowledge transfer checklist
         </p>

@@ -10,6 +10,7 @@ export const useHandover = () => {
   const [error, setError] = useState<string | null>(null);
   const [isTemplateApplying, setIsTemplateApplying] = useState(false);
   const [handoverId, setHandoverId] = useState<string | null>(null);
+  const [handoverStatus, setHandoverStatus] = useState<string | null>(null);
   const { user } = useAuth();
 
   const createHandoverWithTemplate = useCallback(async (successorId?: string) => {
@@ -186,6 +187,7 @@ export const useHandover = () => {
         
         console.log('Selected handover:', handover.id, 'with', handover.tasks?.length || 0, 'tasks');
         setHandoverId(handover.id);
+        setHandoverStatus((handover as any).status || 'active');
         
         let mappedTasks: HandoverTask[] = handover.tasks?.map((task: any) => ({
           id: task.id,
@@ -343,6 +345,7 @@ export const useHandover = () => {
     loading,
     error,
     handoverId,
+    handoverStatus,
     updateTask,
     acknowledgeTask,
     refetch: fetchHandoverData,
