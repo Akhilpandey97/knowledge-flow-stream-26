@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -9,12 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   BarChart3, Users, AlertTriangle, TrendingUp, Brain, Sparkles, Target, 
   UserCheck, UserX, TrendingDown, CheckCircle2, Loader2, HelpCircle,
   Search, ChevronDown, ChevronUp, Zap, ArrowRight, Clock, Mail, Plus, UserPlus,
   CheckCheck, ShieldCheck, Send, Bell, Calendar, Shield, Activity,
-  MessageSquare, MessageCircle, Eye, FileText, RefreshCw
+  MessageSquare, MessageCircle, Eye, FileText, RefreshCw, Download, PieChart
 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
 import { WhatsAppChat } from './WhatsAppChat';
@@ -31,6 +33,16 @@ import { supabase } from '@/integrations/supabase/client';
 
 const departments = ['Sales', 'Engineering', 'Finance', 'Marketing', 'HR', 'Operations'];
 
+// Task data for expanded handover cards
+interface TaskDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  due_date: string | null;
+  created_at: string | null;
+}
+
 export const HRManagerDashboard: React.FC = () => {
   const [expandedHandover, setExpandedHandover] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +52,8 @@ export const HRManagerDashboard: React.FC = () => {
   const [nudgeSending, setNudgeSending] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [handoverTasks, setHandoverTasks] = useState<Record<string, TaskDetail[]>>({});
+  const [loadingTasks, setLoadingTasks] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -60,6 +74,18 @@ export const HRManagerDashboard: React.FC = () => {
     r.message?.toLowerCase().includes('tasks have been acknowledged')
   );
   const pendingKTApprovals = ktApprovalRequests.filter(r => r.status === 'pending');
+
+  // Build escalation map by handover_id for inline badges
+  const escalationsByHandover = useMemo(() => {
+    const map: Record<string, { total: number; pending: number; requests: typeof managerEscalations }> = {};
+    managerEscalations.forEach(r => {
+      if (!map[r.handover_id]) map[r.handover_id] = { total: 0, pending: 0, requests: [] };
+      map[r.handover_id].total++;
+      if (r.status === 'pending') map[r.handover_id].pending++;
+      map[r.handover_id].requests.push(r);
+    });
+    return map;
+  }, [managerEscalations]);
 
   // Handover creation state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -113,6 +139,34 @@ export const HRManagerDashboard: React.FC = () => {
       atRisk: data.atRisk, completed: data.completed,
     })).sort((a, b) => b.total - a.total);
   }, [handovers]);
+
+  // Fetch tasks for an expanded handover
+  const fetchTasksForHandover = async (handoverId: string) => {
+    if (handoverTasks[handoverId]) return; // already fetched
+    setLoadingTasks(handoverId);
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, title, description, status, due_date, created_at')
+        .eq('handover_id', handoverId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      setHandoverTasks(prev => ({ ...prev, [handoverId]: data || [] }));
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+    } finally {
+      setLoadingTasks(null);
+    }
+  };
+
+  const handleToggleExpand = (handoverId: string) => {
+    if (expandedHandover === handoverId) {
+      setExpandedHandover(null);
+    } else {
+      setExpandedHandover(handoverId);
+      fetchTasksForHandover(handoverId);
+    }
+  };
 
   // Handlers
   const handleCreateHandover = async () => {
@@ -176,6 +230,53 @@ export const HRManagerDashboard: React.FC = () => {
     } finally { setNudgeSending(false); }
   };
 
+  // ====== REPORTING STATE ======
+  const reportFields = [
+    { key: 'department', label: 'Department' },
+    { key: 'status', label: 'Status' },
+    { key: 'aiRiskLevel', label: 'Risk Level' },
+    { key: 'successor', label: 'Successor Assigned' },
+  ];
+  const aggregates = [
+    { key: 'count', label: 'Count' },
+    { key: 'avgProgress', label: 'Avg Progress (%)' },
+    { key: 'totalTasks', label: 'Total Tasks' },
+    { key: 'completedTasks', label: 'Completed Tasks' },
+  ];
+  const [reportGroupBy, setReportGroupBy] = useState<string[]>(['department']);
+  const [reportAggregates, setReportAggregates] = useState<string[]>(['count', 'avgProgress']);
+
+  const reportData = useMemo(() => {
+    if (reportGroupBy.length === 0) return [];
+    const groups: Record<string, any> = {};
+    handovers.forEach(h => {
+      const keyParts = reportGroupBy.map(f => {
+        if (f === 'successor') return h.successorEmail ? 'Assigned' : 'Unassigned';
+        return (h as any)[f] || 'Unknown';
+      });
+      const key = keyParts.join(' | ');
+      if (!groups[key]) {
+        groups[key] = { _key: key, _parts: keyParts, count: 0, totalProgress: 0, totalTasks: 0, completedTasks: 0 };
+        reportGroupBy.forEach((f, i) => { groups[key][f] = keyParts[i]; });
+      }
+      groups[key].count++;
+      groups[key].totalProgress += h.progress;
+      groups[key].totalTasks += h.taskCount;
+      groups[key].completedTasks += h.completedTasks;
+    });
+    return Object.values(groups).map((g: any) => ({
+      ...g,
+      avgProgress: g.count > 0 ? Math.round(g.totalProgress / g.count) : 0,
+    })).sort((a: any, b: any) => b.count - a.count);
+  }, [handovers, reportGroupBy]);
+
+  const toggleReportField = (field: string) => {
+    setReportGroupBy(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]);
+  };
+  const toggleAggregate = (agg: string) => {
+    setReportAggregates(prev => prev.includes(agg) ? prev.filter(a => a !== agg) : [...prev, agg]);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -191,6 +292,14 @@ export const HRManagerDashboard: React.FC = () => {
 
   const hasErrors = statsError || handoversError || insightsError;
   const attentionCount = needsAttention.noSuccessor.length + needsAttention.lowProgress.length + pendingEscalations;
+
+  const getTaskStatusColor = (status: string | null) => {
+    switch (status) {
+      case 'completed': return 'bg-success/10 text-success border-success/20';
+      case 'in-progress': return 'bg-primary/10 text-primary border-primary/20';
+      default: return 'bg-muted text-muted-foreground border-border';
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -343,7 +452,7 @@ export const HRManagerDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Tabs */}
+      {/* Tabs — NO Escalations tab, added Reports */}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="w-full justify-start bg-muted/50 p-1 h-11">
           <TabsTrigger value="overview" className="text-xs gap-1.5 data-[state=active]:enterprise-shadow">
@@ -356,9 +465,8 @@ export const HRManagerDashboard: React.FC = () => {
           <TabsTrigger value="departments" className="text-xs gap-1.5 data-[state=active]:enterprise-shadow">
             <BarChart3 className="h-3.5 w-3.5" /> Departments
           </TabsTrigger>
-          <TabsTrigger value="escalations" className="text-xs gap-1.5 data-[state=active]:enterprise-shadow">
-            <MessageSquare className="h-3.5 w-3.5" /> Escalations
-            {pendingEscalations > 0 && <Badge variant="destructive" className="ml-1 h-4 px-1.5 text-[10px]">{pendingEscalations}</Badge>}
+          <TabsTrigger value="reports" className="text-xs gap-1.5 data-[state=active]:enterprise-shadow">
+            <PieChart className="h-3.5 w-3.5" /> Reports
           </TabsTrigger>
         </TabsList>
 
@@ -459,7 +567,7 @@ export const HRManagerDashboard: React.FC = () => {
           </div>
         </TabsContent>
 
-        {/* HANDOVERS TAB */}
+        {/* HANDOVERS TAB — with inline task cards and escalation badges */}
         <TabsContent value="handovers" className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -481,18 +589,31 @@ export const HRManagerDashboard: React.FC = () => {
             {filteredHandovers.length > 0 ? (
               filteredHandovers.map(h => {
                 const isExpanded = expandedHandover === h.id;
+                const esc = escalationsByHandover[h.id];
+                const tasks = handoverTasks[h.id] || [];
                 return (
                   <Card key={h.id} className={`enterprise-shadow overflow-hidden transition-all ${isExpanded ? 'ring-1 ring-primary/20 enterprise-shadow-md' : ''} ${
                     h.aiRiskLevel === 'critical' ? 'border-l-4 border-l-critical' :
                     h.aiRiskLevel === 'high' ? 'border-l-4 border-l-warning' :
                     h.progress >= 90 ? 'border-l-4 border-l-success' : 'border-l-4 border-l-border'
                   }`}>
-                    <div className="flex items-center gap-4 p-5 cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => setExpandedHandover(isExpanded ? null : h.id)}>
+                    <div className="flex items-center gap-4 p-5 cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => handleToggleExpand(h.id)}>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="font-semibold text-sm text-foreground">{h.exitingEmployee}</span>
                           <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                           <span className="text-sm text-muted-foreground">{h.successor || 'Unassigned'}</span>
+                          {/* Inline escalation badge */}
+                          {esc && esc.pending > 0 && (
+                            <Badge variant="destructive" className="text-[9px] px-1.5 py-0 h-4 animate-pulse">
+                              <MessageSquare className="h-2.5 w-2.5 mr-0.5" /> {esc.pending} escalation{esc.pending > 1 ? 's' : ''}
+                            </Badge>
+                          )}
+                          {esc && esc.pending === 0 && esc.total > 0 && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-success/30 text-success">
+                              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {esc.total} resolved
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-md">{h.department}</span>
@@ -513,11 +634,14 @@ export const HRManagerDashboard: React.FC = () => {
                     </div>
                     {isExpanded && (
                       <div className="border-t bg-muted/10 p-5 space-y-4">
+                        {/* Handover details */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                           <div className="flex items-center gap-2.5"><Mail className="h-4 w-4 text-muted-foreground" /><div><p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Exiting</p><p className="text-xs text-foreground">{h.exitingEmployeeEmail}</p></div></div>
                           <div className="flex items-center gap-2.5"><Mail className="h-4 w-4 text-muted-foreground" /><div><p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Successor</p><p className="text-xs text-foreground">{h.successorEmail || 'Not assigned'}</p></div></div>
                           <div className="flex items-center gap-2.5"><Calendar className="h-4 w-4 text-muted-foreground" /><div><p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Created</p><p className="text-xs text-foreground">{new Date(h.createdAt).toLocaleDateString()}</p></div></div>
                         </div>
+
+                        {/* AI Recommendation */}
                         <div className="bg-primary/3 border border-primary/10 rounded-xl p-4 flex items-start gap-3">
                           <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                           <div>
@@ -525,6 +649,74 @@ export const HRManagerDashboard: React.FC = () => {
                             <p className="text-xs text-foreground">{h.aiRecommendation}</p>
                           </div>
                         </div>
+
+                        {/* Inline Escalations */}
+                        {esc && esc.requests.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <MessageSquare className="h-3.5 w-3.5 text-warning" />
+                              <p className="text-xs font-semibold text-foreground">Escalations ({esc.total})</p>
+                              <Button variant="ghost" size="sm" className="h-6 text-[10px] ml-auto gap-1" onClick={(e) => { e.stopPropagation(); setChatOpen(true); }}>
+                                <MessageCircle className="h-3 w-3" /> Open Chat
+                              </Button>
+                            </div>
+                            {esc.requests.slice(0, 3).map(req => (
+                              <div key={req.id} className={`flex items-center gap-3 rounded-lg p-3 border text-xs ${
+                                req.status === 'pending' ? 'border-warning/20 bg-warning/3' : 'border-border bg-card'
+                              }`}>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-foreground line-clamp-1">{req.task?.title || 'Escalation'}</p>
+                                  <p className="text-muted-foreground line-clamp-1 mt-0.5">{req.message}</p>
+                                </div>
+                                <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
+                                  req.status === 'pending' ? 'border-warning/30 text-warning' : 'border-success/30 text-success'
+                                }`}>{req.status}</Badge>
+                                {req.status === 'pending' && (
+                                  <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={(e) => { e.stopPropagation(); setChatOpen(true); }}>
+                                    Respond
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Task Cards */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3.5 w-3.5 text-primary" />
+                            <p className="text-xs font-semibold text-foreground">Tasks ({tasks.length})</p>
+                          </div>
+                          {loadingTasks === h.id ? (
+                            <div className="flex items-center justify-center py-6">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          ) : tasks.length > 0 ? (
+                            <div className="space-y-2">
+                              {tasks.map(task => (
+                                <div key={task.id} className="flex items-center gap-3 bg-card rounded-lg p-3 border enterprise-shadow">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-foreground line-clamp-1">{task.title}</p>
+                                    {task.description && <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{task.description}</p>}
+                                  </div>
+                                  {task.due_date && (
+                                    <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                                      <Clock className="h-2.5 w-2.5 inline mr-0.5" />
+                                      {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  )}
+                                  <Badge variant="outline" className={`text-[9px] px-1.5 py-0 flex-shrink-0 ${getTaskStatusColor(task.status)}`}>
+                                    {task.status || 'pending'}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground py-3 text-center">No tasks created yet</p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
                         <div className="flex flex-wrap gap-2 pt-1">
                           <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 hover:bg-warning/5 hover:text-warning hover:border-warning/30"
                             onClick={(e) => { e.stopPropagation(); setNudgeModal({ open: true, handover: h }); setNudgeMessage(`Hi ${h.exitingEmployee}, your handover is at ${h.progress}%. Please prioritize.`); }}>
@@ -595,50 +787,116 @@ export const HRManagerDashboard: React.FC = () => {
           )}
         </TabsContent>
 
-        {/* ESCALATIONS TAB — WhatsApp style */}
-        <TabsContent value="escalations">
-          <Card className="enterprise-shadow-md">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center"><MessageSquare className="h-5 w-5 text-warning" /></div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-bold text-foreground">Escalations & Approvals</h3>
-                  <p className="text-xs text-muted-foreground">{managerEscalations.length} total · {pendingEscalations} pending</p>
+        {/* REPORTS TAB */}
+        <TabsContent value="reports" className="space-y-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><PieChart className="h-4 w-4 text-primary" /></div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Report Builder</h3>
+              <p className="text-xs text-muted-foreground">Select dimensions and aggregates to build pivot reports</p>
+            </div>
+          </div>
+
+          <Card className="enterprise-shadow">
+            <CardContent className="p-5 space-y-5">
+              {/* Field selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Group By</p>
+                  <div className="space-y-2">
+                    {reportFields.map(f => (
+                      <div key={f.key} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`group-${f.key}`}
+                          checked={reportGroupBy.includes(f.key)}
+                          onCheckedChange={() => toggleReportField(f.key)}
+                        />
+                        <label htmlFor={`group-${f.key}`} className="text-sm text-foreground cursor-pointer">{f.label}</label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setChatOpen(true)}>
-                  <MessageCircle className="h-3.5 w-3.5" /> Open Chat
-                </Button>
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Show Aggregates</p>
+                  <div className="space-y-2">
+                    {aggregates.map(a => (
+                      <div key={a.key} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`agg-${a.key}`}
+                          checked={reportAggregates.includes(a.key)}
+                          onCheckedChange={() => toggleAggregate(a.key)}
+                        />
+                        <label htmlFor={`agg-${a.key}`} className="text-sm text-foreground cursor-pointer">{a.label}</label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              {/* Preview of recent escalations */}
-              <div className="space-y-2">
-                {managerEscalations.slice(0, 5).map(req => (
-                  <div key={req.id} className={`flex items-start gap-3 rounded-xl p-3 border cursor-pointer hover:bg-muted/20 transition-colors ${
-                    req.status === 'pending' ? 'border-warning/20 bg-warning/3' : 'border-border bg-card'
-                  }`} onClick={() => setChatOpen(true)}>
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      req.status === 'pending' ? 'bg-warning/15' : 'bg-success/15'
-                    }`}>
-                      <MessageSquare className={`h-4 w-4 ${req.status === 'pending' ? 'text-warning' : 'text-success'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground line-clamp-1">{req.task?.title || 'Handover Escalation'}</p>
-                      <p className="text-[11px] text-muted-foreground line-clamp-1">{req.message}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
-                        req.status === 'pending' ? 'border-warning/30 text-warning' : 'border-success/30 text-success'
-                      }`}>{req.status}</Badge>
-                    </div>
-                  </div>
-                ))}
-                {managerEscalations.length === 0 && (
-                  <div className="text-center py-8">
-                    <MessageSquare className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No escalations at this time</p>
-                  </div>
-                )}
-              </div>
+              {/* Report Table */}
+              {reportGroupBy.length > 0 && reportAggregates.length > 0 ? (
+                <div className="border rounded-xl overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        {reportGroupBy.map(f => (
+                          <TableHead key={f} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            {reportFields.find(rf => rf.key === f)?.label}
+                          </TableHead>
+                        ))}
+                        {reportAggregates.map(a => (
+                          <TableHead key={a} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">
+                            {aggregates.find(ag => ag.key === a)?.label}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reportData.length > 0 ? reportData.map((row: any, i: number) => (
+                        <TableRow key={i} className="border-border/40">
+                          {reportGroupBy.map(f => (
+                            <TableCell key={f} className="text-sm font-medium text-foreground">{row[f]}</TableCell>
+                          ))}
+                          {reportAggregates.map(a => (
+                            <TableCell key={a} className="text-sm text-right tabular-nums text-foreground">
+                              {a === 'avgProgress' ? `${row[a]}%` : row[a]}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      )) : (
+                        <TableRow>
+                          <TableCell colSpan={reportGroupBy.length + reportAggregates.length} className="text-center py-8 text-sm text-muted-foreground">
+                            No data available
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {/* Totals row */}
+                      {reportData.length > 0 && (
+                        <TableRow className="bg-muted/20 font-semibold border-t-2 border-border">
+                          {reportGroupBy.map((f, i) => (
+                            <TableCell key={f} className="text-sm text-foreground">
+                              {i === 0 ? 'Total' : ''}
+                            </TableCell>
+                          ))}
+                          {reportAggregates.map(a => (
+                            <TableCell key={a} className="text-sm text-right tabular-nums text-foreground font-bold">
+                              {a === 'count' ? reportData.reduce((s: number, r: any) => s + r.count, 0) :
+                               a === 'avgProgress' ? `${Math.round(reportData.reduce((s: number, r: any) => s + r.avgProgress * r.count, 0) / Math.max(1, reportData.reduce((s: number, r: any) => s + r.count, 0)))}%` :
+                               a === 'totalTasks' ? reportData.reduce((s: number, r: any) => s + r.totalTasks, 0) :
+                               a === 'completedTasks' ? reportData.reduce((s: number, r: any) => s + r.completedTasks, 0) : ''}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <PieChart className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Select at least one group-by field and one aggregate to generate a report</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -664,7 +922,7 @@ export const HRManagerDashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* WhatsApp-style Escalations Chat */}
+      {/* WhatsApp-style Escalations Chat (accessible from inline escalation buttons) */}
       <WhatsAppChat
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
