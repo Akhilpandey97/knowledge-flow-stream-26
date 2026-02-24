@@ -68,13 +68,13 @@ export const ExitingEmployeeDashboard: React.FC = () => {
       setNewNote('');
       setSelectedTaskId(null);
       toast({
-        title: 'Note added',
-        description: 'Your note has been saved successfully.',
+        title: 'Insight added',
+        description: 'Your insight has been saved successfully.',
       });
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to save note. Please try again.',
+        description: 'Failed to save insight. Please try again.',
         variant: 'destructive',
       });
     }
@@ -249,12 +249,12 @@ export const ExitingEmployeeDashboard: React.FC = () => {
                     {task.category}
                   </div>
 
-                  {/* Notes Display — individual notes with timestamps */}
+                  {/* Insights Display — individual insights with timestamps */}
                   {task.notesList && task.notesList.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-success" />
-                        <span className="text-sm font-medium text-success">Notes ({task.notesList.length})</span>
+                        <Target className="h-4 w-4 text-success" />
+                        <span className="text-sm font-medium text-success">Insights ({task.notesList.length})</span>
                       </div>
                       {task.notesList.map((note) => (
                         <div key={note.id} className="bg-success/5 border border-success/20 rounded-lg p-3">
@@ -273,8 +273,8 @@ export const ExitingEmployeeDashboard: React.FC = () => {
                   {task.notes && (!task.notesList || task.notesList.length === 0) && (
                     <div className="bg-success/5 border border-success/20 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <FileText className="h-4 w-4 text-success" />
-                        <span className="text-sm font-medium text-success">Notes</span>
+                        <Target className="h-4 w-4 text-success" />
+                        <span className="text-sm font-medium text-success">Insights</span>
                       </div>
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{task.notes}</p>
                     </div>
@@ -289,7 +289,7 @@ export const ExitingEmployeeDashboard: React.FC = () => {
                       className="gap-2"
                     >
                       <Plus className="h-4 w-4" />
-                      Add Note
+                      Add Insight
                     </Button>
                     <Button 
                       variant="ghost"
@@ -306,14 +306,14 @@ export const ExitingEmployeeDashboard: React.FC = () => {
                   {selectedTaskId === task.id && (
                     <div className="space-y-3 pt-3 border-t">
                       <Textarea
-                        placeholder="Add your notes here..."
+                        placeholder="Add your insight here..."
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
                         className="min-h-[120px]"
                       />
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => addNote(task.id)}>
-                          Save Notes
+                          Save Insight
                         </Button>
                         <Button 
                           variant="outline" 
