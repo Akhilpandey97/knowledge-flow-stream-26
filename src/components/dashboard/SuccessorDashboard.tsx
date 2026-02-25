@@ -184,6 +184,10 @@ export const SuccessorDashboard: React.FC = () => {
           {/* Individual insight cards with timestamps */}
           {task.insights && task.insights.length > 0 && (
             <div className="grid grid-cols-1 gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <Lightbulb className="h-3 w-3 text-primary" />
+                <span className="text-[11px] font-semibold text-primary">Insights ({task.insights.length})</span>
+              </div>
               {task.insights.map(insight => (
                 <div key={insight.id} className="bg-primary/3 border border-primary/10 rounded-lg p-2.5">
                   <div className="flex items-center gap-1.5 mb-0.5">
@@ -204,14 +208,21 @@ export const SuccessorDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Notes fallback — compact card */}
-          {task.notes && (!task.insights || task.insights.length === 0) && (
-            <div className="bg-muted/30 border rounded-lg p-2.5">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <FileText className="h-3 w-3 text-muted-foreground" />
-                <span className="text-[11px] font-semibold text-foreground">Notes</span>
+          {/* notesList insights — each as separate tile */}
+          {task.notesList && task.notesList.length > 0 && (!task.insights || task.insights.length === 0) && (
+            <div className="grid grid-cols-1 gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <Lightbulb className="h-3 w-3 text-primary" />
+                <span className="text-[11px] font-semibold text-primary">Insights ({task.notesList.length})</span>
               </div>
-              <p className="text-[11px] text-muted-foreground line-clamp-2">{task.notes}</p>
+              {task.notesList.map(note => (
+                <div key={note.id} className="bg-primary/3 border border-primary/10 rounded-lg p-2.5">
+                  <p className="text-[11px] text-foreground leading-relaxed">{note.content}</p>
+                  <p className="text-[9px] text-muted-foreground/60 mt-1">
+                    {new Date(note.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
 

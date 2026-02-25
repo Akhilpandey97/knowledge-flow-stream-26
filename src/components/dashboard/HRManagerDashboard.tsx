@@ -34,6 +34,12 @@ import { supabase } from '@/integrations/supabase/client';
 const departments = ['Sales', 'Engineering', 'Finance', 'Marketing', 'HR', 'Operations'];
 
 // Task data for expanded handover cards
+interface TaskNote {
+  id: string;
+  content: string | null;
+  created_at: string | null;
+}
+
 interface TaskDetail {
   id: string;
   title: string;
@@ -41,6 +47,7 @@ interface TaskDetail {
   status: string | null;
   due_date: string | null;
   created_at: string | null;
+  notes?: TaskNote[];
 }
 
 export const HRManagerDashboard: React.FC = () => {
@@ -151,7 +158,26 @@ export const HRManagerDashboard: React.FC = () => {
         .eq('handover_id', handoverId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      setHandoverTasks(prev => ({ ...prev, [handoverId]: data || [] }));
+      
+      // Fetch notes for all tasks
+      const taskIds = (data || []).map(t => t.id);
+      let notesMap: Record<string, TaskNote[]> = {};
+      if (taskIds.length > 0) {
+        const { data: notesData } = await supabase
+          .from('notes')
+          .select('id, content, created_at, task_id')
+          .in('task_id', taskIds)
+          .order('created_at', { ascending: true });
+        if (notesData) {
+          notesData.forEach((n: any) => {
+            if (!notesMap[n.task_id]) notesMap[n.task_id] = [];
+            notesMap[n.task_id].push({ id: n.id, content: n.content, created_at: n.created_at });
+          });
+        }
+      }
+      
+      const tasksWithNotes = (data || []).map(t => ({ ...t, notes: notesMap[t.id] || [] }));
+      setHandoverTasks(prev => ({ ...prev, [handoverId]: tasksWithNotes }));
     } catch (err) {
       console.error('Error fetching tasks:', err);
     } finally {
@@ -715,20 +741,41 @@ export const HRManagerDashboard: React.FC = () => {
                           ) : tasks.length > 0 ? (
                             <div className="space-y-2">
                               {tasks.map(task => (
-                                <div key={task.id} className="flex items-center gap-3 bg-card rounded-lg p-3 border enterprise-shadow">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold text-foreground line-clamp-1">{task.title}</p>
-                                    {task.description && <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{task.description}</p>}
+                                <div key={task.id} className="bg-card rounded-lg border enterprise-shadow overflow-hidden">
+                                  <div className="flex items-center gap-3 p-3">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-semibold text-foreground line-clamp-1">{task.title}</p>
+                                      {task.description && <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{task.description}</p>}
+                                    </div>
+                                    {task.due_date && (
+                                      <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                                        <Clock className="h-2.5 w-2.5 inline mr-0.5" />
+                                        {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      </span>
+                                    )}
+                                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0 flex-shrink-0 ${getTaskStatusColor(task.status)}`}>
+                                      {task.status || 'pending'}
+                                    </Badge>
                                   </div>
-                                  {task.due_date && (
-                                    <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                                      <Clock className="h-2.5 w-2.5 inline mr-0.5" />
-                                      {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                    </span>
+                                  {/* Insight tiles per task */}
+                                  {task.notes && task.notes.length > 0 && (
+                                    <div className="border-t bg-muted/10 px-3 py-2 space-y-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <Sparkles className="h-3 w-3 text-primary" />
+                                        <span className="text-[10px] font-semibold text-primary">Insights ({task.notes.length})</span>
+                                      </div>
+                                      {task.notes.map(note => (
+                                        <div key={note.id} className="bg-primary/3 border border-primary/10 rounded-lg p-2.5">
+                                          <p className="text-[11px] text-foreground leading-relaxed">{note.content}</p>
+                                          {note.created_at && (
+                                            <p className="text-[9px] text-muted-foreground/60 mt-1">
+                                              {new Date(note.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
                                   )}
-                                  <Badge variant="outline" className={`text-[9px] px-1.5 py-0 flex-shrink-0 ${getTaskStatusColor(task.status)}`}>
-                                    {task.status || 'pending'}
-                                  </Badge>
                                 </div>
                               ))}
                             </div>
